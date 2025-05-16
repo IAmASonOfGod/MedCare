@@ -13,8 +13,10 @@ import { useRouter } from "next/navigation";
 import { createUser } from "@/lib/actions/patient.actions";
 import { FormFieldType } from "./PatientForm";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
-import { GenderOptions } from "@/constants";
+import { Doctors, GenderOptions } from "@/constants";
 import { Label } from "@/components/ui/label";
+import Image from "next/image";
+import { SelectItem } from "../ui/select";
 
 const RegisterForm = ({ user }: { user: User }) => {
   const router = useRouter();
@@ -88,7 +90,7 @@ const RegisterForm = ({ user }: { user: User }) => {
             fieldType={FormFieldType.INPUT}
             name="email"
             label="Email"
-            placeholder="Markj@thejohnsons.com"
+            placeholder="markj@thejohnsons.com"
             iconSrc="/assets/icons/email.svg"
             iconAlt="user"
             control={form.control}
@@ -138,15 +140,104 @@ const RegisterForm = ({ user }: { user: User }) => {
           />
         </div>
 
+        <div className="flex flex-col gap-6 xl:flex-row">
+          <CustomFormField
+            fieldType={FormFieldType.INPUT}
+            name="address"
+            label="Address"
+            placeholder="e.g 123 Main Street, Soweto.."
+            control={form.control}
+          />
+          <CustomFormField
+            fieldType={FormFieldType.INPUT}
+            name="occupation"
+            label="Occupation"
+            placeholder="e.g Teacher, Police Officer.."
+            iconSrc="/assets/icons/email.svg"
+            iconAlt="user"
+            control={form.control}
+          />
+        </div>
+        <div className="flex flex-col gap-6 xl:flex-row">
+          <CustomFormField
+            fieldType={FormFieldType.INPUT}
+            name="EmergencyContactName"
+            label="Emergency contact name"
+            placeholder="Guardian's name"
+            control={form.control}
+          />
+
+          <CustomFormField
+            fieldType={FormFieldType.PHONE_INPUT}
+            name="emergencyContactNumber"
+            label="Emergency contact number"
+            placeholder="012 892 7658"
+            control={form.control}
+          />
+        </div>
+
         <section className="space-y-6">
           <div className="mb-9 space-y-1">
             <h2 className="sub-header">Medical information</h2>
           </div>
         </section>
-        <div className="flex flex-col gap-6 xl:flex-row"></div>
-        <div className="flex flex-col gap-6 xl:flex-row"></div>
-        <div className="flex flex-col gap-6 xl:flex-row"></div>
-        <div className="flex flex-col gap-6 xl:flex-row"></div>
+
+        <CustomFormField
+          fieldType={FormFieldType.SELECT}
+          name="primaryPhysician"
+          label="Primary Physician"
+          placeholder="Select a physician"
+          control={form.control}
+        >
+          {Doctors.map((doctor) => (
+            <SelectItem key={doctor.name} value={doctor.name}>
+              <div className="flex cursor-pointer items-center gap-2">
+                <Image
+                  src={doctor.image}
+                  width={32}
+                  height={32}
+                  className="rounded-full border border-dark-500"
+                  alt={"doctor.name"}
+                />
+                <p>{doctor.name}</p>
+              </div>
+            </SelectItem>
+          ))}
+        </CustomFormField>
+        <div className="flex flex-col gap-6 xl:flex-row">
+          {" "}
+          <CustomFormField
+            fieldType={FormFieldType.INPUT}
+            name="insuranceProvider"
+            label="Insurance Provider"
+            placeholder="e.g NovaCover"
+            control={form.control}
+          />
+          <CustomFormField
+            fieldType={FormFieldType.INPUT}
+            name="insurancePolicyNumber"
+            label="Insurance policy number"
+            placeholder="e.g ABCD123456789"
+            control={form.control}
+          />
+        </div>
+        <div className="flex flex-col gap-6 xl:flex-row">
+          {" "}
+          <CustomFormField
+            fieldType={FormFieldType.TEXTAREA}
+            name="allergies"
+            label="Allergies (if any)"
+            placeholder="e.g Peanuts, Penicillin, Pollen"
+            control={form.control}
+          />
+          <CustomFormField
+            fieldType={FormFieldType.TEXTAREA}
+            name="currentMedication"
+            label="Current Medication (if any)"
+            placeholder="e.g Ibuprofen 200mg, Paracetamol 500mg"
+            control={form.control}
+          />
+        </div>
         <div className="flex flex-col gap-6 xl:flex-row"></div>
 
         <SubmitButton isLoading={isLoading}>Get Started</SubmitButton>
