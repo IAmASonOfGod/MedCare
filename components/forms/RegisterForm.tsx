@@ -8,47 +8,67 @@ import { Form, FormControl } from "@/components/ui/form";
 import CustomFormField from "../CustomFormField";
 import SubmitButton from "../SubmitButton";
 import { useState } from "react";
-import { userFormValidation } from "@/lib/validation";
+import { PatientFormValidation } from "@/lib/validation";
 import { useRouter } from "next/navigation";
-import { createUser } from "@/lib/actions/patient.actions";
+import { createUser, registerPatient } from "@/lib/actions/patient.actions";
 import { FormFieldType } from "./PatientForm";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
-import { Doctors, GenderOptions } from "@/constants";
+import {
+  Doctors,
+  GenderOptions,
+  IdentificationTypes,
+  PatientFormDefaultValues,
+} from "@/constants";
 import { Label } from "@/components/ui/label";
 import Image from "next/image";
 import { SelectItem } from "../ui/select";
+import FileUploader from "../FileUploader";
 
 const RegisterForm = ({ user }: { user: User }) => {
   const router = useRouter();
 
   const [isLoading, setIsLoading] = useState(false);
 
-  const form = useForm<z.infer<typeof userFormValidation>>({
-    resolver: zodResolver(userFormValidation),
+  const form = useForm<z.infer<typeof PatientFormValidation>>({
+    resolver: zodResolver(PatientFormValidation),
     defaultValues: {
+      ...PatientFormDefaultValues,
       name: "",
       email: "",
       phone: "",
     },
   });
 
-  async function onSubmit({
-    name,
-    email,
-    phone,
-  }: z.infer<typeof userFormValidation>) {
+  async function onSubmit(values: z.infer<typeof PatientFormValidation>) {
     setIsLoading(true);
 
-    try {
-      const userData = { name, email, phone };
+    let formData;
 
-      const user = await createUser(userData);
-      if (user) {
-        console.log("User created:", user);
-        router.push(`/patients/${user.$id}/register`);
-      } else {
-        console.log("Failed to create user");
-      }
+    if (
+      values.identificationDocument &&
+      values.identificationDocument.length > 0
+    ) {
+      const blobFile = new Blob([values.identificationDocument[0]], {
+        type: values.identificationDocument[0].type,
+      });
+
+      formData = new FormData();
+      formData.append("blobFile", blobFile);
+      formData.append("fileName", values.identificationDocument[0].name);
+    }
+
+    try {
+      const patientData = {
+        ...values,
+        userId: user.$id,
+        birthDate: new Date(values.birthDate),
+        identificationDocument: formData,
+      };
+
+      //@ts-ignore
+      const patient: any = await registerPatient(patientData);
+
+      if (patient) router.push(`/patients/${user.$id}/new-appointment`);
     } catch (e) {
       console.log(e);
     }
@@ -66,7 +86,7 @@ const RegisterForm = ({ user }: { user: User }) => {
       >
         <section className="space-y-4">
           <h1 className="header">Welcome 👋</h1>
-          <p className="text-dark-700">Let us know more about yourself.</p>
+          <p className="text-dark-700">Let us know more about you.</p>
         </section>
 
         <section className="space-y-6">
@@ -79,7 +99,7 @@ const RegisterForm = ({ user }: { user: User }) => {
           fieldType={FormFieldType.INPUT}
           name="name"
           label="Full name"
-          placeholder="Mark J"
+          placeholder="e.g Mark John Ramsey"
           iconSrc="/assets/icons/user.svg"
           iconAlt="user"
           control={form.control}
@@ -90,7 +110,7 @@ const RegisterForm = ({ user }: { user: User }) => {
             fieldType={FormFieldType.INPUT}
             name="email"
             label="Email"
-            placeholder="markj@thejohnsons.com"
+            placeholder="e.g markj@thejohnsons.com"
             iconSrc="/assets/icons/email.svg"
             iconAlt="user"
             control={form.control}
@@ -238,8 +258,91 @@ const RegisterForm = ({ user }: { user: User }) => {
             control={form.control}
           />
         </div>
-        <div className="flex flex-col gap-6 xl:flex-row"></div>
 
+        <div className="flex flex-col gap-6 xl:flex-row">
+          {" "}
+          <CustomFormField
+            fieldType={FormFieldType.TEXTAREA}
+            name="familyMedicalHistory"
+            label="Family medical history"
+            placeholder="e.g Mother had brain cancer, Father had heart disease"
+            control={form.control}
+          />
+          <CustomFormField
+            fieldType={FormFieldType.TEXTAREA}
+            name="pastMedicalHistory"
+            label="Past medical history"
+            placeholder="e.g Appendectomy, Tonsillectomy"
+            control={form.control}
+          />
+        </div>
+
+        <section className="space-y-6">
+          <div className="mb-9 space-y-1">
+            <h2 className="sub-header">Identification and Verification</h2>
+          </div>
+        </section>
+        <CustomFormField
+          fieldType={FormFieldType.SELECT}
+          name="identificationType"
+          label="Identification type"
+          placeholder="Select an identification type"
+          control={form.control}
+        >
+          {IdentificationTypes.map((type) => (
+            <SelectItem key={type} value={type}>
+              {type}
+            </SelectItem>
+          ))}
+        </CustomFormField>
+
+        <CustomFormField
+          fieldType={FormFieldType.INPUT}
+          name="identificationNumber"
+          label="Identification number"
+          placeholder="e.g 123456789"
+          control={form.control}
+        />
+
+        <CustomFormField
+          fieldType={FormFieldType.SKELETON}
+          name="identificationDocument"
+          label="Scanned copy of identification document"
+          placeholder="012 892 7658"
+          control={form.control}
+          renderSkeleton={(field) => (
+            <FormControl>
+              <FileUploader files={field.value} onChange={field.onChange} />
+            </FormControl>
+          )}
+        />
+
+        <section className="space-y-6">
+          <div className="mb-9 space-y-1">
+            <h2 className="sub-header">Consent and Privacy</h2>
+          </div>
+        </section>
+
+        <CustomFormField
+          fieldType={FormFieldType.CHECKBOX}
+          control={form.control}
+          name="treatmentConsent"
+          label="I consent to treatment"
+        />
+
+        <CustomFormField
+          fieldType={FormFieldType.CHECKBOX}
+          control={form.control}
+          name="disclosureConsent"
+          label="I consent to disclosure of information"
+        />
+
+        <CustomFormField
+          fieldType={FormFieldType.CHECKBOX}
+          control={form.control}
+          name="privacyConsent"
+          label="I consent to privacy policy"
+        />
         <SubmitButton isLoading={isLoading}>Get Started</SubmitButton>
       </form>
     </Form>
