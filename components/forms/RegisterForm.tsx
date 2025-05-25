@@ -39,7 +39,13 @@ const RegisterForm = ({ user }: { user: User }) => {
     },
   });
 
+  console.log("Form errors:", form.formState.errors);
+  console.log("Form is valid:", form.formState.isValid);
+
   async function onSubmit(values: z.infer<typeof PatientFormValidation>) {
+    console.log("Form values:", values);
+    console.log("Form errors:", form.formState.errors);
+    console.log("onSubmit triggered");
     setIsLoading(true);
 
     let formData;
@@ -65,9 +71,8 @@ const RegisterForm = ({ user }: { user: User }) => {
         identificationDocument: formData,
       };
 
-      //@ts-ignore
       const patient: any = await registerPatient(patientData);
-
+      console.log("Saved Patient :", patient);
       if (patient) router.push(`/patients/${user.$id}/new-appointment`);
     } catch (e) {
       console.log(e);
@@ -181,7 +186,7 @@ const RegisterForm = ({ user }: { user: User }) => {
         <div className="flex flex-col gap-6 xl:flex-row">
           <CustomFormField
             fieldType={FormFieldType.INPUT}
-            name="EmergencyContactName"
+            name="emergencyContactName"
             label="Emergency contact name"
             placeholder="Guardian's name"
             control={form.control}

@@ -13,7 +13,7 @@ import {
 } from "../appwrite.config";
 import { parseStringify } from "../utils";
 import { InputFile } from "node-appwrite";
-import { Blob } from "buffer";
+import { Buffer } from "buffer";
 
 export const createUser = async (user: CreateUserParams) => {
   console.log("User :", user);
@@ -58,6 +58,11 @@ export const registerPatient = async ({
   identificationDocument,
   ...patient
 }: RegisterUserParams) => {
+  console.log(
+    "identication Document AND patient:",
+    identificationDocument,
+    patient
+  );
   try {
     let file;
 
@@ -88,6 +93,8 @@ export const registerPatient = async ({
         ...patient,
       }
     );
+
+    return parseStringify(newPatient);
   } catch (error) {
     console.log(error);
   }
