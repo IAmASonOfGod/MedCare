@@ -9,7 +9,7 @@ interface ButtonProps {
 }
 
 const SubmitButton = ({ isLoading, className, children }: ButtonProps) => {
-  console.log("Submit Button Triggered");
+  // console.log("Submit Button Triggered");
 
   return (
     <Button
