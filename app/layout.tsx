@@ -11,10 +11,24 @@ const fontSans = Plus_Jakarta_Sans({
   variable: "--font-Sans",
 });
 
-export const metadata: Metadata = {
-  title: "MedCare",
-  description: "A one stop healthcare management system",
-};
+// ❌ Remove this static metadata
+// export const metadata: Metadata = {
+//   title: "MedCare",
+//   description: "A one stop healthcare management system",
+// };
+
+import * as Sentry from "@sentry/nextjs";
+
+// ✅ Keep this dynamic metadata
+export function generateMetadata(): Metadata {
+  return {
+    title: "MedCare",
+    description: "A one stop healthcare management system",
+    other: {
+      ...Sentry.getTraceData(),
+    },
+  };
+}
 
 export default function RootLayout({
   children,
@@ -35,16 +49,4 @@ export default function RootLayout({
       </body>
     </html>
   );
-}
-
-import * as Sentry from "@sentry/nextjs";
-
-// Add or edit your "generateMetadata" to include the Sentry trace data:
-export function generateMetadata(): Metadata {
-  return {
-    // ... your existing metadata
-    other: {
-      ...Sentry.getTraceData(),
-    },
-  };
 }
