@@ -77,3 +77,17 @@ export const StatusIcon = {
   pending: "/assets/icons/pending.svg",
   cancelled: "/assets/icons/cancelled.svg",
 };
+
+// Business hours configuration
+export const BUSINESS_HOURS = {
+  startHour: 8, // 8 AM
+  endHour: 17, // 5 PM
+  startMinute: 0,
+  endMinute: 0,
+};
+
+// Appointment slot configuration (in minutes)
+export const APPOINTMENT_SLOT_DURATION = 30; // 30 minutes per appointment
+
+// Days of the week (0 = Sunday, 1 = Monday, etc.)
+export const BUSINESS_DAYS = [1, 2, 3, 4, 5]; // Monday to Friday only

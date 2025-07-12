@@ -1,5 +1,10 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+import {
+  BUSINESS_HOURS,
+  BUSINESS_DAYS,
+  APPOINTMENT_SLOT_DURATION,
+} from "@/constants";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -74,4 +79,90 @@ export function encryptKey(passkey: string) {
 
 export function decryptKey(passkey: string) {
   return atob(passkey);
+}
+
+// APPOINTMENT VALIDATION FUNCTIONS
+export function isWithinBusinessHours(date: Date): boolean {
+  const dayOfWeek = date.getDay();
+  const hour = date.getHours();
+  const minute = date.getMinutes();
+
+  // Check if it's a business day
+  if (!BUSINESS_DAYS.includes(dayOfWeek)) {
+    return false;
+  }
+
+  // Check if it's within business hours
+  const totalMinutes = hour * 60 + minute;
+  const startMinutes =
+    BUSINESS_HOURS.startHour * 60 + BUSINESS_HOURS.startMinute;
+  const endMinutes = BUSINESS_HOURS.endHour * 60 + BUSINESS_HOURS.endMinute;
+
+  return totalMinutes >= startMinutes && totalMinutes < endMinutes;
+}
+
+export function isSlotAligned(date: Date): boolean {
+  const minute = date.getMinutes();
+  return minute % APPOINTMENT_SLOT_DURATION === 0;
+}
+
+export function generateTimeSlots(date: Date): Date[] {
+  const slots: Date[] = [];
+  const startDate = new Date(date);
+  startDate.setHours(
+    BUSINESS_HOURS.startHour,
+    BUSINESS_HOURS.startMinute,
+    0,
+    0
+  );
+
+  const endDate = new Date(date);
+  endDate.setHours(BUSINESS_HOURS.endHour, BUSINESS_HOURS.endMinute, 0, 0);
+
+  let currentSlot = new Date(startDate);
+
+  while (currentSlot < endDate) {
+    slots.push(new Date(currentSlot));
+    currentSlot.setMinutes(
+      currentSlot.getMinutes() + APPOINTMENT_SLOT_DURATION
+    );
+  }
+
+  return slots;
+}
+
+export function filterAvailableSlots(
+  allSlots: Date[],
+  bookedSlots: Date[],
+  selectedDoctor?: string
+): Date[] {
+  return allSlots.filter((slot) => {
+    // Check if slot is within business hours
+    if (!isWithinBusinessHours(slot)) {
+      return false;
+    }
+
+    // Check if slot is aligned with appointment duration
+    if (!isSlotAligned(slot)) {
+      return false;
+    }
+
+    // Check if slot conflicts with existing appointments
+    const slotEnd = new Date(
+      slot.getTime() + APPOINTMENT_SLOT_DURATION * 60000
+    );
+
+    const hasConflict = bookedSlots.some((bookedSlot) => {
+      const bookedEnd = new Date(
+        bookedSlot.getTime() + APPOINTMENT_SLOT_DURATION * 60000
+      );
+      return (
+        (slot >= bookedSlot && slot < bookedEnd) ||
+        (slotEnd > bookedSlot && slotEnd <= bookedEnd) ||
+        (slot <= bookedSlot && slotEnd >= bookedEnd)
+      );
+    });
+
+    return !hasConflict;
+  });
 }

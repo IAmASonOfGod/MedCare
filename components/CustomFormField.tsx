@@ -20,6 +20,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import { Select, SelectContent, SelectTrigger, SelectValue } from "./ui/select";
 import { Textarea } from "./ui/textarea";
 import { Checkbox } from "./ui/checkbox";
+import AvailableSlotsDatePicker from "./AvailableSlotsDatePicker";
 
 type E164Number = string & { __tag: "E164Number" };
 
@@ -36,6 +37,8 @@ interface CustomProps {
   showTimeSelect?: boolean;
   children?: React.ReactNode;
   renderSkeleton?: (field: any) => React.ReactNode;
+  doctorName?: string; // Add doctorName prop for appointment validation
+  error?: string; // Add error prop for validation messages
 }
 
 const RenderField = ({ field, props }: { field: any; props: CustomProps }) => {
@@ -150,6 +153,18 @@ const RenderField = ({ field, props }: { field: any; props: CustomProps }) => {
           </div>
         </FormControl>
       );
+    case FormFieldType.APPOINTMENT_DATE_PICKER:
+      return (
+        <AvailableSlotsDatePicker
+          selected={field.value}
+          onChange={(date) => field.onChange(date)}
+          doctorName={props.doctorName || ""}
+          dateFormat={dateFormat ?? "MM/dd/yyyy - h:mm aa"}
+          showTimeSelect={showTimeSelect ?? true}
+          wrapperClassName="date-picker"
+          error={props.error}
+        />
+      );
     default:
       break;
   }
@@ -168,7 +183,10 @@ const CustomFormField = (props: CustomProps) => {
           )}
 
           <RenderField field={field} props={props} />
-          <FormMessage className="shad-error" />
+          {/* Don't show FormMessage for appointment date picker since it handles its own error display */}
+          {fieldType !== FormFieldType.APPOINTMENT_DATE_PICKER && (
+            <FormMessage className="shad-error" />
+          )}
         </FormItem>
       )}
     />

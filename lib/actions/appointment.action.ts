@@ -10,11 +10,22 @@ import {
 import { formatDateTime, parseStringify } from "../utils";
 import { Appointment } from "@/types/appwrite.types";
 import { revalidatePath } from "next/cache";
+import { validateAppointmentSlot } from "../appointment-validation";
 
 export const createAppointment = async (
   appointment: CreateAppointmentParams
 ) => {
   try {
+    // Validate the appointment slot before creating
+    const validation = await validateAppointmentSlot(
+      appointment.primaryPhysician,
+      appointment.schedule
+    );
+
+    if (!validation.isValid) {
+      throw new Error(validation.message || "Invalid appointment slot");
+    }
+
     const newAppointment = await databases.createDocument(
       DATABASE_ID!,
       APPOINTMENT_COLLECTION_ID!,
@@ -25,6 +36,7 @@ export const createAppointment = async (
     return parseStringify(newAppointment);
   } catch (error) {
     console.log(error);
+    throw error; // Re-throw to handle in the UI
   }
 };
 

@@ -57,6 +57,9 @@ const AppointmentForm = ({
     },
   });
 
+  // Watch the selected doctor for appointment validation
+  const selectedDoctor = form.watch("primaryPhysician");
+
   async function onSubmit(values: z.infer<typeof AppointmentFormValidation>) {
     console.log("I'm submitting", { type });
     setIsLoading(true);
@@ -116,8 +119,17 @@ const AppointmentForm = ({
           form.reset();
         }
       }
-    } catch (e) {
-      console.log(e);
+    } catch (e: any) {
+      console.log("Error caught in AppointmentForm:", e);
+      console.log("Error message:", e.message);
+      console.log("Error stack:", e.stack);
+      // Handle validation errors by setting form errors instead of using alerts
+      if (e.message) {
+        form.setError("schedule", {
+          type: "manual",
+          message: e.message,
+        });
+      }
     }
 
     setIsLoading(false);
@@ -177,12 +189,14 @@ const AppointmentForm = ({
             </CustomFormField>
 
             <CustomFormField
-              fieldType={FormFieldType.DATE_PICKER}
+              fieldType={FormFieldType.APPOINTMENT_DATE_PICKER}
               control={form.control}
               name="schedule"
               label="Expected appointment date"
               showTimeSelect
               dateFormat="MM/dd/yyyy - h:mm aa"
+              doctorName={selectedDoctor}
+              error={form.formState.errors.schedule?.message}
             />
 
             <div className="flex flex-col gap-6 xl:flex-row">
