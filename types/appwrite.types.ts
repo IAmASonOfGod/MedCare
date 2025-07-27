@@ -38,6 +38,7 @@ export interface Appointment extends Models.Document {
   userId: string;
   practiceId: string;
   cancellationReason: string | null;
+  patient?: Patient | null; // Populated by batched data fetching
 }
 
 export interface Practice extends Models.Document {

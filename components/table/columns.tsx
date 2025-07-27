@@ -10,7 +10,7 @@ import { formatDateTime } from "@/lib/utils";
 import { Doctors } from "@/constants";
 import Image from "next/image";
 import AppointmentModal from "../AppointmentModal";
-import { Appointment, Patient } from "@/types/appwrite.types";
+import { Appointment } from "@/types/appwrite.types";
 
 export const columns: ColumnDef<Appointment>[] = [
   {
