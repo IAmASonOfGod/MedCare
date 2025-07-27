@@ -24,10 +24,11 @@ import Image from "next/image";
 import { SelectItem } from "../ui/select";
 import FileUploader from "../FileUploader";
 
-const RegisterForm = ({ user }: { user: User }) => {
+const RegisterForm = ({ practiceId }: { practiceId: string }) => {
   const router = useRouter();
 
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof PatientFormValidation>>({
     resolver: zodResolver(PatientFormValidation),
@@ -36,6 +37,7 @@ const RegisterForm = ({ user }: { user: User }) => {
       name: "",
       email: "",
       phone: "",
+      practiceId, // ensure practiceId is set in default values
     },
   });
 
@@ -47,6 +49,7 @@ const RegisterForm = ({ user }: { user: User }) => {
     console.log("Form errors:", form.formState.errors);
     console.log("onSubmit triggered");
     setIsLoading(true);
+    setError(null); // Clear previous errors
 
     let formData;
 
@@ -64,17 +67,36 @@ const RegisterForm = ({ user }: { user: User }) => {
     }
 
     try {
+      // First, create the user
+      const user = await createUser({
+        name: values.name,
+        email: values.email,
+        phone: values.phone,
+        practiceId,
+      });
+      if (!user || !user.$id) {
+        setError("Failed to create user. Please try again.");
+        setIsLoading(false);
+        return;
+      }
+      // Now register the patient with the new userId
       const patientData = {
         ...values,
         userId: user.$id,
         birthDate: new Date(values.birthDate),
         identificationDocument: formData,
+        practiceId, // ensure practiceId is included in submission
       };
 
       const patient: any = await registerPatient(patientData);
       console.log("Saved Patient :", patient);
-      if (patient) router.push(`/patients/${user.$id}/new-appointment`);
+      if (patient && patient.userId) {
+        router.push(`/patients/${practiceId}/register/success`);
+      } else {
+        setError("Registration failed. Please try again.");
+      }
     } catch (e) {
+      setError("An unexpected error occurred. Please try again.");
       console.log(e);
     }
 
@@ -85,6 +107,7 @@ const RegisterForm = ({ user }: { user: User }) => {
 
   return (
     <Form {...form}>
+      {error && <div className="text-red-600 text-center mb-4">{error}</div>}
       <form
         onSubmit={form.handleSubmit(onSubmit)}
         className="space-y-12 flex-1"

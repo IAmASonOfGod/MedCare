@@ -54,13 +54,44 @@ export const getAppointment = async (appointmentId: string) => {
   }
 };
 
-export const getRecentAppointmentList = async () => {
+export const getRecentAppointmentList = async (practiceId?: string) => {
   try {
+    const queries = [Query.orderDesc("$createdAt")];
+    
+    // Add practice filter if practiceId is provided
+    if (practiceId) {
+      queries.push(Query.equal("practiceId", [practiceId]));
+    }
+
     const appointments = await databases.listDocuments(
       DATABASE_ID!,
       APPOINTMENT_COLLECTION_ID!,
-      [Query.orderDesc("$createdAt")]
+      queries
     );
+
+    // Fetch all patient data in a single query to avoid N+1 problem
+    const patientIds = appointments.documents.map((appointment: any) => appointment.patientId);
+    const uniquePatientIds = [...new Set(patientIds)];
+    
+    let patientsMap = new Map();
+    if (uniquePatientIds.length > 0) {
+      const patients = await databases.listDocuments(
+        DATABASE_ID!,
+        PATIENT_COLLECTION_ID!,
+        [Query.equal("$id", uniquePatientIds)]
+      );
+      
+      // Create a map for quick patient lookup
+      patients.documents.forEach((patient: any) => {
+        patientsMap.set(patient.$id, patient);
+      });
+    }
+
+    // Attach patient data to appointments
+    const appointmentsWithPatients = appointments.documents.map((appointment: any) => ({
+      ...appointment,
+      patient: patientsMap.get(appointment.patientId) || null
+    }));
 
     const initialCounts = {
       scheduledCount: 0,
@@ -68,7 +99,7 @@ export const getRecentAppointmentList = async () => {
       cancelledCount: 0,
     };
 
-    const counts = (appointments.documents as Appointment[]).reduce(
+    const counts = appointmentsWithPatients.reduce(
       (acc, appointment) => {
         if (appointment.status === "scheduled") {
           acc.scheduledCount += 1;
@@ -85,7 +116,7 @@ export const getRecentAppointmentList = async () => {
     const data = {
       totalCounts: appointments.total,
       ...counts,
-      documents: appointments.documents,
+      documents: appointmentsWithPatients,
     };
 
     return parseStringify(data);

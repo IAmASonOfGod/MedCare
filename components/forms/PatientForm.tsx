@@ -22,7 +22,11 @@ export enum FormFieldType {
   SKELETON = "skeleton",
 }
 
-const PatientForm = () => {
+interface PatientFormProps {
+  practiceId: string;
+}
+
+const PatientForm = ({ practiceId }: PatientFormProps) => {
   const router = useRouter();
 
   const [isLoading, setIsLoading] = useState(false);
@@ -44,7 +48,7 @@ const PatientForm = () => {
     setIsLoading(true);
 
     try {
-      const userData = { name, email, phone };
+      const userData = { name, email, phone, practiceId };
 
       const user = await createUser(userData);
       if (user) {

@@ -11,7 +11,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Control } from "react-hook-form";
 import { FormFieldType } from "./forms/PatientForm";
-import React from "react";
+import React, { createContext, useContext, useState } from "react";
 import Image from "next/image";
 import "react-phone-number-input/style.css";
 import PhoneInput from "react-phone-number-input";
@@ -21,6 +21,8 @@ import { Select, SelectContent, SelectTrigger, SelectValue } from "./ui/select";
 import { Textarea } from "./ui/textarea";
 import { Checkbox } from "./ui/checkbox";
 import AvailableSlotsDatePicker from "./AvailableSlotsDatePicker";
+import { usePractice } from "../components/PracticeContext";
+import { Query } from "node-appwrite"; // or "appwrite" if using the browser SDK
 
 type E164Number = string & { __tag: "E164Number" };
 
@@ -39,6 +41,7 @@ interface CustomProps {
   renderSkeleton?: (field: any) => React.ReactNode;
   doctorName?: string; // Add doctorName prop for appointment validation
   error?: string; // Add error prop for validation messages
+  type?: string; // Add type prop for input type (e.g., number, text)
 }
 
 const RenderField = ({ field, props }: { field: any; props: CustomProps }) => {
@@ -50,26 +53,39 @@ const RenderField = ({ field, props }: { field: any; props: CustomProps }) => {
     showTimeSelect,
     dateFormat,
     renderSkeleton,
+    type, // Add type here
   } = props;
 
   switch (fieldType) {
     case FormFieldType.INPUT:
       return (
-        <div className="flex rounded-md border border-dark-500 bg-dark-400">
+        <div
+          className={`flex rounded-md border border-dark-500 bg-dark-400 ${
+            props.disabled
+              ? "bg-gray-200 dark:bg-gray-700 cursor-not-allowed"
+              : ""
+          }`}
+        >
           {iconSrc && (
             <Image
               src={iconSrc}
               height={24}
               width={24}
               alt={iconAlt || "icon"}
-              className="ml-2"
+              className="ml-2 input-icon"
             />
           )}
           <FormControl>
             <Input
               placeholder={placeholder}
               {...field}
-              className="shad-input border-0"
+              type={type || "text"} // Pass type prop to Input
+              className={`shad-input border-0 ${
+                props.disabled
+                  ? "bg-gray-200 dark:bg-gray-700 cursor-not-allowed"
+                  : ""
+              }`}
+              disabled={props.disabled}
             />
           </FormControl>
         </div>
@@ -101,13 +117,13 @@ const RenderField = ({ field, props }: { field: any; props: CustomProps }) => {
       );
     case FormFieldType.DATE_PICKER:
       return (
-        <div className="flex rounded-mb border border-dark-500 bg-dark-400">
+        <div className="flex rounded-md border border-dark-500 bg-dark-400">
           <Image
             src="/assets/icons/calendar.svg"
             height={24}
             width={24}
             alt="calendar"
-            className="ml-2"
+            className="ml-2 input-icon"
           />
           <FormControl>
             <DatePicker
@@ -124,7 +140,16 @@ const RenderField = ({ field, props }: { field: any; props: CustomProps }) => {
     case FormFieldType.SELECT:
       return (
         <FormControl>
-          <Select onValueChange={field.onChange} defaultValue={field.value}>
+          <Select
+            onValueChange={(value) => {
+              if (props.name === "consultationInterval") {
+                field.onChange(Number(value));
+              } else {
+                field.onChange(value);
+              }
+            }}
+            defaultValue={field.value ? String(field.value) : undefined}
+          >
             <FormControl>
               <SelectTrigger className="shad-select-trigger">
                 <SelectValue placeholder={placeholder} />
@@ -172,6 +197,8 @@ const RenderField = ({ field, props }: { field: any; props: CustomProps }) => {
 
 const CustomFormField = (props: CustomProps) => {
   const { control, fieldType, name, label } = props;
+  const { practiceName } = usePractice();
+
   return (
     <FormField
       control={control}

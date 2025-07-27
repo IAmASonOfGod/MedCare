@@ -22,18 +22,20 @@ import {
   createAppointment,
   updateAppointment,
 } from "@/lib/actions/appointment.action";
-import { Appointment } from "@/types/appwrite.types";
+import { Appointment, Status } from "@/types/appwrite.types";
 import { scheduler } from "timers/promises";
 
 const AppointmentForm = ({
   userId,
   patientId,
+  practiceId,
   type,
   appointment,
   setOpen,
 }: {
   userId: string;
   patientId: string;
+  practiceId: string;
   type: "create" | "cancel" | "schedule";
   appointment?: Appointment;
   setOpen?: (open: boolean) => void;
@@ -41,6 +43,7 @@ const AppointmentForm = ({
   const router = useRouter();
 
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const AppointmentFormValidation = getAppointmentSchema(type);
 
@@ -80,22 +83,24 @@ const AppointmentForm = ({
 
     console.log("Status", status);
     try {
-      if (type === "create" && patientId) {
+      if (type === "create" && patientId && practiceId) {
         const appointmentData = {
           userId,
-          patient: patientId,
+          patientId,
+          practiceId,
           primaryPhysician: values.primaryPhysician,
           schedule: new Date(values.schedule),
           reason: values.reason!,
           note: values.note,
           status: status as Status,
         };
+        console.log("Appointment data being sent:", appointmentData);
         const appointment = await createAppointment(appointmentData);
 
         if (appointment) {
           form.reset();
           router.push(
-            `/patients/${userId}/new-appointment/success?appointmentId=${appointment.$id}`
+            `/patients/${practiceId}/new-appointment/success?appointmentId=${appointment.$id}`
           );
         }
       } else {
@@ -121,15 +126,9 @@ const AppointmentForm = ({
       }
     } catch (e: any) {
       console.log("Error caught in AppointmentForm:", e);
-      console.log("Error message:", e.message);
-      console.log("Error stack:", e.stack);
-      // Handle validation errors by setting form errors instead of using alerts
-      if (e.message) {
-        form.setError("schedule", {
-          type: "manual",
-          message: e.message,
-        });
-      }
+      setError(
+        "Sorry, something went wrong while booking your appointment. Please try again or contact support."
+      );
     }
 
     setIsLoading(false);
@@ -153,6 +152,7 @@ const AppointmentForm = ({
 
   return (
     <Form {...form}>
+      {error && <div className="text-red-600 text-center mb-4">{error}</div>}
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 flex-1">
         {type === "create" && (
           <section className="mb-12 space-y-4">

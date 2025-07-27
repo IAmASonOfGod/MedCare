@@ -1,5 +1,8 @@
 import { Models } from "node-appwrite";
 
+export type Gender = "male" | "female" | "other";
+export type Status = "pending" | "scheduled" | "cancelled";
+
 export interface Patient extends Models.Document {
   userId: string;
   name: string;
@@ -22,15 +25,25 @@ export interface Patient extends Models.Document {
   identificationNumber: string | undefined;
   identificationDocument: FormData | undefined;
   privacyConsent: boolean;
+  practiceId: string;
 }
 
 export interface Appointment extends Models.Document {
-  patient: Patient;
+  patientId: string;
   schedule: Date;
   status: Status;
   primaryPhysician: string;
   reason: string;
   note: string;
   userId: string;
+  practiceId: string;
   cancellationReason: string | null;
+}
+
+export interface Practice extends Models.Document {
+  practiceName: string;
+  adminEmail: string;
+  address: string;
+  phone: string;
+  // Add other practice fields as needed
 }

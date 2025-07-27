@@ -15,11 +15,11 @@ import { parseStringify } from "../utils";
 import { InputFile } from "node-appwrite";
 import { Buffer } from "buffer";
 
-export const createUser = async (user: CreateUserParams) => {
+export const createUser = async (
+  user: CreateUserParams & { practiceId?: string }
+) => {
   console.log("User :", user);
-
   try {
-    console.log("User :", user);
     const newUser = await users.create(
       ID.unique(),
       user.email,
@@ -27,19 +27,28 @@ export const createUser = async (user: CreateUserParams) => {
       undefined,
       user.name
     );
-
-    console.log("New User :", { newUser });
-
+    // Save patient data in the patients collection, including practiceId
+    if (user.practiceId) {
+      await databases.createDocument(
+        DATABASE_ID!,
+        PATIENT_COLLECTION_ID!,
+        ID.unique(),
+        {
+          userId: newUser.$id,
+          name: user.name,
+          email: user.email,
+          phone: user.phone,
+          practiceId: user.practiceId,
+        }
+      );
+    }
     return parseStringify(newUser);
   } catch (error: any) {
     console.error("Error creating user:", error);
-    //Check existing user
-
     if (error && error?.code === 409) {
       const existingUser = await users.list([
         Query.equal("email", [user.email]),
       ]);
-
       return existingUser.users[0];
     }
   }
@@ -54,16 +63,57 @@ export const getUser = async (userId: string) => {
   }
 };
 
-export const getPatient = async (userId: string) => {
+export const getPatient = async (patientIdOrUserId: string) => {
+  try {
+    // First, try to get the document directly (in case it's a patient document ID)
+    try {
+      const patient = await databases.getDocument(
+        DATABASE_ID!,
+        PATIENT_COLLECTION_ID!,
+        patientIdOrUserId
+      );
+      return parseStringify(patient);
+    } catch (error) {
+      // If that fails, try to find by userId
+      if (patientIdOrUserId && patientIdOrUserId.trim() !== "") {
+        const patients = await databases.listDocuments(
+          DATABASE_ID!,
+          PATIENT_COLLECTION_ID!,
+          [Query.equal("userId", [patientIdOrUserId])]
+        );
+        return parseStringify(patients.documents[0]);
+      }
+      return null;
+    }
+  } catch (error) {
+    console.log(error);
+    return null;
+  }
+};
+
+export const findPatientByEmailAndPhone = async (
+  email: string,
+  phone: string,
+  practiceId: string
+) => {
   try {
     const patients = await databases.listDocuments(
       DATABASE_ID!,
       PATIENT_COLLECTION_ID!,
-      [Query.equal("userId", userId)]
+      [
+        Query.equal("email", [email]),
+        Query.equal("phone", [phone]),
+        Query.equal("practiceId", [practiceId]),
+      ]
     );
-    return parseStringify(patients.documents[0]);
+
+    if (patients.documents.length > 0) {
+      return parseStringify(patients.documents[0]);
+    }
+    return null;
   } catch (error) {
     console.log(error);
+    return null;
   }
 };
 

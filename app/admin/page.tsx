@@ -1,27 +1,51 @@
-import StatCard from "@/components/StatCard";
+"use client";
+import React, { useEffect, useState } from "react";
+import { usePractice } from "@/components/PracticeContext";
 import { getRecentAppointmentList } from "@/lib/actions/appointment.action";
+import StatCard from "@/components/StatCard";
 import Image from "next/image";
 import Link from "next/link";
-import React from "react";
 import { columns } from "@/components/table/columns";
 import { DataTable } from "@/components/table/DataTable";
+import HealthcareProviderModal from "@/components/HealthcareProviderModal";
+import ThemeToggle from "@/components/ThemeToggle";
+import { fetchPracticeByAdminEmail } from "@/lib/actions/practice.actions";
 
-const Admin = async () => {
-  const appointments = await getRecentAppointmentList();
-  // console.log("Appointments List:", appointments);
+const Admin = () => {
+  const [appointments, setAppointments] = useState<any>(null);
+  const { practice } = usePractice();
+  console.log("Practice Name in Admin Page:", practice?.practiceName);
+  useEffect(() => {
+    async function fetchAppointments() {
+      if (!practice?.$id) return;
+
+      const data = await getRecentAppointmentList(practice.$id);
+      setAppointments(data);
+
+      // Signal that admin page is ready
+      localStorage.setItem("adminReady", "true");
+    }
+    fetchAppointments();
+  }, [practice?.$id]);
+
+  // if (!appointments) return <div>Loading...</div>;
+
+  // Provide default values if appointments is null
+  const appointmentData = appointments || {
+    scheduledCount: 0,
+    pendingCount: 0,
+    cancelledCount: 0,
+    documents: [],
+  };
+
   return (
     <div className="mx-auto flex max-w-7xl flex-col space-y-14">
       <header className="admin-header">
         <Link href="/" className="cursor-pointer">
-          <Image
-            src="/assets/icons/logo-full.svg"
-            height={32}
-            width={162}
-            alt="Logo"
-            className="h-8 w-fit"
-          />
+          <span className="font-bold text-lg text-white">
+            {practice?.practiceName || "MedCare Bookings"}
+          </span>
         </Link>
-
         <p className="text-16-semibold">Admin Dashboard</p>
       </header>
       <main className="admin-main">
@@ -34,24 +58,29 @@ const Admin = async () => {
         <section className="admin-stat">
           <StatCard
             type="appointments"
-            count={appointments.scheduledCount}
+            count={appointmentData.scheduledCount}
             label="Scheduled appointments"
             icon="/assets/icons/appointments.svg"
           />
           <StatCard
             type="pending"
-            count={appointments.pendingCount}
+            count={appointmentData.pendingCount}
             label="Pending appointments"
             icon="/assets/icons/pending.svg"
           />
           <StatCard
             type="cancelled"
-            count={appointments.cancelledCount}
+            count={appointmentData.cancelledCount}
             label="Cancelled appointments"
             icon="/assets/icons/cancelled.svg"
           />
         </section>
-        <DataTable columns={columns} data={appointments.documents} />
+        {/* Add Healthcare Provider Modal Button and Theme Toggle */}
+        <div className="flex justify-end my-4 gap-2 items-center">
+          <HealthcareProviderModal />
+          <ThemeToggle />
+        </div>
+        <DataTable columns={columns} data={appointmentData.documents} />
       </main>
     </div>
   );

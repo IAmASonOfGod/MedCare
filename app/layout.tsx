@@ -4,6 +4,8 @@ import "./globals.css";
 
 import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/components/theme-provider";
+import { useEffect } from "react";
+import Providers from "@/components/Providers";
 
 const fontSans = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -37,15 +39,32 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var saved = localStorage.getItem('medcare-theme');
+                  document.body.classList.remove('theme-dark', 'theme-light');
+                  document.body.classList.add(saved || 'theme-dark');
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
+      </head>
       <body
         className={cn(
           "min-h-screen bg-dark-300 font-sans antialiased",
           fontSans.variable
         )}
       >
-        <ThemeProvider attribute="class" defaultTheme="dark">
-          {children}
-        </ThemeProvider>
+        <Providers>
+          <ThemeProvider attribute="class" defaultTheme="dark">
+            {children}
+          </ThemeProvider>
+        </Providers>
       </body>
     </html>
   );

@@ -10,7 +10,7 @@ import { formatDateTime } from "@/lib/utils";
 import { Doctors } from "@/constants";
 import Image from "next/image";
 import AppointmentModal from "../AppointmentModal";
-import { Appointment } from "@/types/appwrite.types";
+import { Appointment, Patient } from "@/types/appwrite.types";
 
 export const columns: ColumnDef<Appointment>[] = [
   {
@@ -18,11 +18,15 @@ export const columns: ColumnDef<Appointment>[] = [
     cell: ({ row }) => <p className="text-14-medium">{row.index + 1}</p>,
   },
   {
-    accessorKey: "patient",
+    accessorKey: "patientId",
     header: "Patient",
-    cell: ({ row }) => (
-      <p className="text-14-medium">{row.original.patient.name}</p>
-    ),
+    cell: ({ row }) => {
+      const patient = row.original.patient;
+      if (!patient) {
+        return <p className="text-14-medium text-red-500">Patient not found</p>;
+      }
+      return <p className="text-14-medium">{patient.name}</p>;
+    },
   },
   {
     accessorKey: "status",
@@ -76,14 +80,14 @@ export const columns: ColumnDef<Appointment>[] = [
         <div className="flex gap-1">
           <AppointmentModal
             type="schedule"
-            patientId={data.patient.$id}
+            patientId={data.patientId}
             userId={data.userId}
             appointment={data}
           />
 
           <AppointmentModal
             type="cancel"
-            patientId={data.patient.$id}
+            patientId={data.patientId}
             userId={data.userId}
             appointment={data}
           />
