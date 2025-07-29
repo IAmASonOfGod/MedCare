@@ -226,6 +226,10 @@
     @apply bg-dark-400 border-dark-500 !important;
   }
 
+  .shad-select-content-scrollable {
+    @apply bg-dark-400 border-dark-500 max-h-[192px] overflow-y-auto !important;
+  }
+
   .shad-dialog {
     @apply bg-dark-400 border-dark-500 !important;
   }

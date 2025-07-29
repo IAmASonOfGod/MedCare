@@ -42,6 +42,7 @@ interface CustomProps {
 
   error?: string; // Add error prop for validation messages
   type?: string; // Add type prop for input type (e.g., number, text)
+  selectContentClassName?: string; // Add prop for custom SelectContent styling
 }
 
 const RenderField = ({ field, props }: { field: any; props: CustomProps }) => {
@@ -155,7 +156,9 @@ const RenderField = ({ field, props }: { field: any; props: CustomProps }) => {
                 <SelectValue placeholder={placeholder} />
               </SelectTrigger>
             </FormControl>
-            <SelectContent className="shad-select-content">
+            <SelectContent
+              className={props.selectContentClassName || "shad-select-content"}
+            >
               {props.children}
             </SelectContent>
           </Select>
@@ -196,7 +199,6 @@ const RenderField = ({ field, props }: { field: any; props: CustomProps }) => {
 
 const CustomFormField = (props: CustomProps) => {
   const { control, fieldType, name, label } = props;
-  const { practiceName } = usePractice();
 
   return (
     <FormField

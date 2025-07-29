@@ -16,6 +16,14 @@ import ThemeToggle from "@/components/ThemeToggle";
 import AppointmentAnalytics from "@/components/AppointmentAnalytics";
 import CollapsibleSection from "@/components/CollapsibleSection";
 import { fetchPracticeByAdminEmail } from "@/lib/actions/practice.actions";
+import PracticeSettingsModal from "@/components/PracticeSettingsModal";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 
 const Admin = () => {
   const [appointments, setAppointments] = useState<any>(null);
@@ -26,15 +34,15 @@ const Admin = () => {
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
-  const [viewMode, setViewMode] = useState<
-    "all" | "today" | "upcoming"
-  >("all");
+  const [viewMode, setViewMode] = useState<"all" | "today" | "upcoming">("all");
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [collapsedSections, setCollapsedSections] = useState({
     analytics: false,
     appointments: false,
   });
+  const [isPracticeSettingsOpen, setIsPracticeSettingsOpen] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const { practice } = usePractice();
   console.log("Practice Name in Admin Page:", practice?.practiceName);
 
@@ -131,9 +139,7 @@ const Admin = () => {
   };
 
   // Toggle collapsible sections
-  const toggleSection = (
-    section: "analytics" | "appointments"
-  ) => {
+  const toggleSection = (section: "analytics" | "appointments") => {
     setCollapsedSections((prev) => ({
       ...prev,
       [section]: !prev[section],
@@ -187,7 +193,114 @@ const Admin = () => {
       </header>
       <main className="admin-main">
         <section className="w-full space-y-4">
-          <h1 className="header">Welcome 👋 </h1>
+          <div className="flex justify-between items-center">
+            <h1 className="header">Welcome 👋 </h1>
+            <DropdownMenu
+              open={isDropdownOpen}
+              onOpenChange={setIsDropdownOpen}
+            >
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="bg-dark-400 text-white border-dark-500 hover:bg-dark-500 hover:text-white transition-colors"
+                >
+                  <svg
+                    className="w-5 h-5 mr-2"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 6h16M4 12h16M4 18h16"
+                    />
+                  </svg>
+                  Menu
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className="w-48 bg-dark-400 border-dark-500"
+              >
+                <DropdownMenuItem
+                  onClick={() => {
+                    setIsPracticeSettingsOpen(true);
+                    setIsDropdownOpen(false);
+                  }}
+                  className="text-white hover:bg-dark-500 focus:bg-dark-500 cursor-pointer"
+                >
+                  <svg
+                    className="w-4 h-4 mr-2"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
+                  </svg>
+                  Practice Settings
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    console.log("Payment clicked");
+                    setIsDropdownOpen(false);
+                  }}
+                  className="text-white hover:bg-dark-500 focus:bg-dark-500 cursor-pointer"
+                >
+                  <svg
+                    className="w-4 h-4 mr-2"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+                    />
+                  </svg>
+                  Payment
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    // TODO: Implement logout functionality
+                    console.log("Logout clicked");
+                    setIsDropdownOpen(false);
+                    // You can add logout logic here, e.g., redirect to login page
+                  }}
+                  className="text-white hover:bg-dark-500 focus:bg-dark-500 cursor-pointer"
+                >
+                  <svg
+                    className="w-4 h-4 mr-2"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                    />
+                  </svg>
+                  Logout
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
           <p className="text-dark-700">
             Start the day with managing new appointments
           </p>
@@ -498,6 +611,11 @@ const Admin = () => {
           </div>
         </CollapsibleSection>
       </main>
+
+      <PracticeSettingsModal
+        open={isPracticeSettingsOpen}
+        onOpenChange={setIsPracticeSettingsOpen}
+      />
     </div>
   );
 };
