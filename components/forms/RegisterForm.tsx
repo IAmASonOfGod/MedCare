@@ -14,7 +14,6 @@ import { createUser, registerPatient } from "@/lib/actions/patient.actions";
 import { FormFieldType } from "./PatientForm";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import {
-  Doctors,
   GenderOptions,
   IdentificationTypes,
   PatientFormDefaultValues,
@@ -230,28 +229,6 @@ const RegisterForm = ({ practiceId }: { practiceId: string }) => {
           </div>
         </section>
 
-        <CustomFormField
-          fieldType={FormFieldType.SELECT}
-          name="primaryPhysician"
-          label="Primary Physician"
-          placeholder="Select a physician"
-          control={form.control}
-        >
-          {Doctors.map((doctor) => (
-            <SelectItem key={doctor.name} value={doctor.name}>
-              <div className="flex cursor-pointer items-center gap-2">
-                <Image
-                  src={doctor.image}
-                  width={32}
-                  height={32}
-                  className="rounded-full border border-dark-500"
-                  alt={"doctor.name"}
-                />
-                <p>{doctor.name}</p>
-              </div>
-            </SelectItem>
-          ))}
-        </CustomFormField>
         <div className="flex flex-col gap-6 xl:flex-row">
           {" "}
           <CustomFormField

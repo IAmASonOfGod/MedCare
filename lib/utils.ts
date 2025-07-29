@@ -133,8 +133,7 @@ export function generateTimeSlots(date: Date): Date[] {
 
 export function filterAvailableSlots(
   allSlots: Date[],
-  bookedSlots: Date[],
-  selectedDoctor?: string
+  bookedSlots: Date[]
 ): Date[] {
   return allSlots.filter((slot) => {
     // Check if slot is within business hours

@@ -45,7 +45,7 @@ const PracticeLanding = async ({
               Register as a New Patient
             </Link>
             <Link
-              href={`/patients/${practiceId}/login/new`}
+              href={`/patients/${practiceId}/login`}
               className="px-6 py-3 rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold text-center"
             >
               Book an Appointment

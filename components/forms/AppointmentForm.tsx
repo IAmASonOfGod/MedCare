@@ -15,15 +15,11 @@ import {
 import { useRouter } from "next/navigation";
 import { createUser } from "@/lib/actions/patient.actions";
 import { FormFieldType } from "./PatientForm";
-import { Doctors } from "@/constants";
-import { SelectItem } from "../ui/select";
-import Image from "next/image";
 import {
   createAppointment,
   updateAppointment,
 } from "@/lib/actions/appointment.action";
 import { Appointment, Status } from "@/types/appwrite.types";
-import { scheduler } from "timers/promises";
 
 const AppointmentForm = ({
   userId,
@@ -36,7 +32,7 @@ const AppointmentForm = ({
   userId: string;
   patientId: string;
   practiceId: string;
-  type: "create" | "cancel" | "schedule";
+  type: "create" | "cancel" | "schedule" | "complete" | "no-show";
   appointment?: Appointment;
   setOpen?: (open: boolean) => void;
 }) => {
@@ -50,7 +46,6 @@ const AppointmentForm = ({
   const form = useForm<z.infer<typeof AppointmentFormValidation>>({
     resolver: zodResolver(AppointmentFormValidation),
     defaultValues: {
-      primaryPhysician: appointment ? appointment.primaryPhysician : "",
       schedule: appointment
         ? new Date(appointment.schedule)
         : new Date(Date.now()),
@@ -59,9 +54,6 @@ const AppointmentForm = ({
       cancellationReason: appointment?.cancellationReason ?? "",
     },
   });
-
-  // Watch the selected doctor for appointment validation
-  const selectedDoctor = form.watch("primaryPhysician");
 
   async function onSubmit(values: z.infer<typeof AppointmentFormValidation>) {
     console.log("I'm submitting", { type });
@@ -76,6 +68,12 @@ const AppointmentForm = ({
       case "cancel":
         status = "cancelled";
         break;
+      case "complete":
+        status = "completed";
+        break;
+      case "no-show":
+        status = "no-show";
+        break;
       default:
         status = "pending";
         break;
@@ -88,7 +86,6 @@ const AppointmentForm = ({
           userId,
           patientId,
           practiceId,
-          primaryPhysician: values.primaryPhysician,
           schedule: new Date(values.schedule),
           reason: values.reason!,
           note: values.note,
@@ -109,7 +106,6 @@ const AppointmentForm = ({
           userId,
           appointmentId: appointment?.$id!,
           appointment: {
-            primaryPhysician: values?.primaryPhysician,
             schedule: new Date(values?.schedule),
             status: status as Status,
             cancellationReason: values?.cancellationReason,
@@ -146,6 +142,12 @@ const AppointmentForm = ({
     case "schedule":
       buttonLabel = "Schedule Appointment";
       break;
+    case "complete":
+      buttonLabel = "Mark as Completed";
+      break;
+    case "no-show":
+      buttonLabel = "Mark as No Show";
+      break;
     default:
       break;
   }
@@ -166,36 +168,12 @@ const AppointmentForm = ({
         {type !== "cancel" && (
           <>
             <CustomFormField
-              fieldType={FormFieldType.SELECT}
-              name="primaryPhysician"
-              label="Doctor"
-              placeholder="Select a doctor"
-              control={form.control}
-            >
-              {Doctors.map((doctor) => (
-                <SelectItem key={doctor.name} value={doctor.name}>
-                  <div className="flex cursor-pointer items-center gap-2">
-                    <Image
-                      src={doctor.image}
-                      width={32}
-                      height={32}
-                      className="rounded-full border border-dark-500"
-                      alt={"doctor.name"}
-                    />
-                    <p>{doctor.name}</p>
-                  </div>
-                </SelectItem>
-              ))}
-            </CustomFormField>
-
-            <CustomFormField
               fieldType={FormFieldType.APPOINTMENT_DATE_PICKER}
               control={form.control}
               name="schedule"
               label="Expected appointment date"
               showTimeSelect
               dateFormat="MM/dd/yyyy - h:mm aa"
-              doctorName={selectedDoctor}
               error={form.formState.errors.schedule?.message}
             />
 

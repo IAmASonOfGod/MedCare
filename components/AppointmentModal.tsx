@@ -17,23 +17,37 @@ const AppointmentModal = ({
   type,
   patientId,
   userId,
+  practiceId,
   appointment,
 }: {
-  type: "schedule" | "cancel";
+  type: "schedule" | "cancel" | "complete" | "no-show";
   patientId: string;
   userId: string;
+  practiceId: string;
   appointment?: Appointment;
 }) => {
   const [open, setOpen] = useState(false);
   console.log({ type, patientId, userId, appointment }, "from the Modal");
 
+  const getButtonStyle = () => {
+    switch (type) {
+      case "schedule":
+        return "text-green-500";
+      case "cancel":
+        return "text-red-500";
+      case "complete":
+        return "text-blue-500";
+      case "no-show":
+        return "text-yellow-500";
+      default:
+        return "";
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button
-          variant="ghost"
-          className={`capitalize ${type === "schedule" && "text-green-500"}`}
-        >
+        <Button variant="ghost" className={`capitalize ${getButtonStyle()}`}>
           {type}
         </Button>
       </DialogTrigger>
@@ -47,6 +61,7 @@ const AppointmentModal = ({
         <AppointmentForm
           userId={userId}
           patientId={patientId}
+          practiceId={practiceId}
           type={type}
           appointment={appointment}
           setOpen={setOpen}

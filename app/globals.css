@@ -91,7 +91,7 @@
   }
 
   .admin-stat {
-    @apply flex w-full flex-col justify-between gap-5 sm:flex-row xl:gap-10;
+    @apply flex w-full flex-col justify-between gap-3 sm:flex-row xl:gap-6;
   }
 
   /* ==== FORM */
@@ -591,6 +591,25 @@ input[type="number"],
   background: #fff !important;
 }
 
+/* Admin buttons light theme styling */
+.theme-light button[class*="bg-dark-400"] {
+  background-color: #6b7280 !important;
+  color: #ffffff !important;
+}
+
+.theme-light button[class*="bg-dark-400"]:hover {
+  background-color: #4b5563 !important;
+}
+
+.theme-light div[class*="bg-dark-400"] {
+  background-color: #6b7280 !important;
+  color: #ffffff !important;
+}
+
+.theme-light div[class*="bg-dark-400"] span {
+  color: #e5e7eb !important;
+}
+
 /* Phone input theming */
 .theme-light .PhoneInputInput {
   background: #f1f5f9 !important;
@@ -814,4 +833,23 @@ input[type="number"],
 .theme-dark .datepicker-popper .react-datepicker__month-container,
 .theme-dark .datepicker-popper .react-datepicker__time-container {
   border: none !important; /* remove all inner borders */
+}
+
+/* Admin buttons light theme styling */
+.theme-light button[class*="bg-dark-400"] {
+  background-color: #6b7280 !important;
+  color: #ffffff !important;
+}
+
+.theme-light button[class*="bg-dark-400"]:hover {
+  background-color: #4b5563 !important;
+}
+
+.theme-light div[class*="bg-dark-400"] {
+  background-color: #6b7280 !important;
+  color: #ffffff !important;
+}
+
+.theme-light div[class*="bg-dark-400"] span {
+  color: #e5e7eb !important;
 }

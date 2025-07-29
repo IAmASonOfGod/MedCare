@@ -12,23 +12,23 @@ interface StatCardProps {
 const StatCard = ({ count = 0, label, icon, type }: StatCardProps) => {
   return (
     <div
-      className={clsx("stat-card", {
+      className={clsx("stat-card transition-all duration-200", {
         "bg-appointments": type === "appointments",
         "bg-pending": type === "pending",
         "bg-cancelled": type === "cancelled",
       })}
     >
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
         <Image
           src={icon}
-          height={32}
-          width={32}
+          height={24}
+          width={24}
           alt="label"
-          className="size-8 w-fit"
+          className="size-6 w-fit"
         />
-        <h2 className="text-32-bold stat-card-count">{count}</h2>
+        <h2 className="text-24-bold stat-card-count">{count}</h2>
       </div>
-      <p className="text-14-regular">{label}</p>
+      <p className="text-12-regular">{label}</p>
     </div>
   );
 };

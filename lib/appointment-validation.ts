@@ -14,10 +14,7 @@ import {
   filterAvailableSlots,
 } from "./utils";
 
-export const getBookedAppointmentsForDoctor = async (
-  doctorName: string,
-  date: Date
-) => {
+export const getBookedAppointmentsForDate = async (date: Date) => {
   try {
     // Get the start and end of the day
     const startOfDay = new Date(date);
@@ -25,15 +22,12 @@ export const getBookedAppointmentsForDoctor = async (
     const endOfDay = new Date(date);
     endOfDay.setHours(23, 59, 59, 999);
 
-    console.log(
-      `Fetching appointments for ${doctorName} on ${date.toDateString()}`
-    );
+    console.log(`Fetching appointments for ${date.toDateString()}`);
 
     const appointments = await databases.listDocuments(
       DATABASE_ID!,
       APPOINTMENT_COLLECTION_ID!,
       [
-        Query.equal("primaryPhysician", doctorName),
         Query.greaterThanEqual("schedule", startOfDay.toISOString()),
         Query.lessThanEqual("schedule", endOfDay.toISOString()),
         Query.equal("status", ["scheduled", "pending"]),
@@ -44,7 +38,7 @@ export const getBookedAppointmentsForDoctor = async (
       (a) => new Date(a.schedule)
     );
 
-    console.log(`Found ${bookedSlots.length} booked slots for ${doctorName}`);
+    console.log(`Found ${bookedSlots.length} booked slots`);
     return bookedSlots;
   } catch (error) {
     console.error("Error fetching booked appointments:", error);
@@ -52,18 +46,11 @@ export const getBookedAppointmentsForDoctor = async (
   }
 };
 
-export const getAvailableSlotsForDoctor = async (
-  doctorName: string,
-  date: Date
-) => {
+export const getAvailableSlotsForDate = async (date: Date) => {
   try {
-    const bookedSlots = await getBookedAppointmentsForDoctor(doctorName, date);
+    const bookedSlots = await getBookedAppointmentsForDate(date);
     const allSlots = generateTimeSlots(date);
-    const availableSlots = filterAvailableSlots(
-      allSlots,
-      bookedSlots,
-      doctorName
-    );
+    const availableSlots = filterAvailableSlots(allSlots, bookedSlots);
 
     return availableSlots;
   } catch (error) {
@@ -73,15 +60,11 @@ export const getAvailableSlotsForDoctor = async (
 };
 
 export const validateAppointmentSlot = async (
-  doctorName: string,
   proposedDate: Date
 ): Promise<{ isValid: boolean; message?: string }> => {
   try {
     // Check for conflicts only - UI handles business hours and slot alignment
-    const bookedSlots = await getBookedAppointmentsForDoctor(
-      doctorName,
-      proposedDate
-    );
+    const bookedSlots = await getBookedAppointmentsForDate(proposedDate);
     const slotEnd = new Date(proposedDate.getTime() + 30 * 60000); // 30 minutes
 
     const hasConflict = bookedSlots.some((bookedSlot) => {

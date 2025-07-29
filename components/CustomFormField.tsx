@@ -39,7 +39,7 @@ interface CustomProps {
   showTimeSelect?: boolean;
   children?: React.ReactNode;
   renderSkeleton?: (field: any) => React.ReactNode;
-  doctorName?: string; // Add doctorName prop for appointment validation
+
   error?: string; // Add error prop for validation messages
   type?: string; // Add type prop for input type (e.g., number, text)
 }
@@ -183,7 +183,6 @@ const RenderField = ({ field, props }: { field: any; props: CustomProps }) => {
         <AvailableSlotsDatePicker
           selected={field.value}
           onChange={(date) => field.onChange(date)}
-          doctorName={props.doctorName || ""}
           dateFormat={dateFormat ?? "MM/dd/yyyy - h:mm aa"}
           showTimeSelect={showTimeSelect ?? true}
           wrapperClassName="date-picker"

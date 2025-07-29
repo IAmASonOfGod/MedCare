@@ -5,13 +5,12 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { FormControl } from "@/components/ui/form";
 import Image from "next/image";
-import { getAvailableSlotsForDoctor } from "@/lib/appointment-validation";
+import { getAvailableSlotsForDate } from "@/lib/appointment-validation";
 import { generateTimeSlots } from "@/lib/utils";
 
 interface AvailableSlotsDatePickerProps {
   selected: Date | null;
   onChange: (date: Date | null) => void;
-  doctorName: string;
   dateFormat?: string;
   showTimeSelect?: boolean;
   wrapperClassName?: string;
@@ -21,7 +20,6 @@ interface AvailableSlotsDatePickerProps {
 const AvailableSlotsDatePicker: React.FC<AvailableSlotsDatePickerProps> = ({
   selected,
   onChange,
-  doctorName,
   dateFormat = "MM/dd/yyyy",
   showTimeSelect = false,
   wrapperClassName = "date-picker",
@@ -34,8 +32,6 @@ const AvailableSlotsDatePicker: React.FC<AvailableSlotsDatePickerProps> = ({
 
   // Filter time options to only show available slots
   const filterTime = (time: Date) => {
-    if (!doctorName) return true; // If no doctor selected, allow all times
-
     // Check if this time is in the available slots
     const timeString = time.toLocaleTimeString("en-US", {
       hour: "numeric",
@@ -84,11 +80,11 @@ const AvailableSlotsDatePicker: React.FC<AvailableSlotsDatePickerProps> = ({
     setPreviousSelection(date);
   };
 
-  // Load available slots when doctor or date changes
+  // Load available slots when date changes
   useEffect(() => {
-    if (doctorName && selected) {
+    if (selected) {
       setIsLoading(true);
-      getAvailableSlotsForDoctor(doctorName, selected)
+      getAvailableSlotsForDate(selected)
         .then((slots) => {
           setAvailableSlots(slots);
         })
@@ -103,12 +99,11 @@ const AvailableSlotsDatePicker: React.FC<AvailableSlotsDatePickerProps> = ({
       setAvailableSlots([]);
       setIsLoading(false);
     }
-  }, [doctorName, selected]);
+  }, [selected]);
 
-  // Show different placeholder based on doctor selection
+  // Show different placeholder based on loading state
   const getPlaceholderText = () => {
     if (isLoading) return "Loading available slots...";
-    if (!doctorName) return "Please select a doctor first";
     return "Select date and time";
   };
 
@@ -144,7 +139,7 @@ const AvailableSlotsDatePicker: React.FC<AvailableSlotsDatePickerProps> = ({
               placeholderText={getPlaceholderText()}
               isClearable
               showPopperArrow={false}
-              disabled={isLoading || !doctorName}
+              disabled={isLoading}
               popperClassName="datepicker-popper"
               open={isOpen}
               onCalendarOpen={() => setIsOpen(true)}

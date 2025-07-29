@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 
 import StatusBadge from "../StatusBadge";
 import { formatDateTime } from "@/lib/utils";
-import { Doctors } from "@/constants";
+
 import Image from "next/image";
 import AppointmentModal from "../AppointmentModal";
 import { Appointment } from "@/types/appwrite.types";
@@ -22,8 +22,14 @@ export const columns: ColumnDef<Appointment>[] = [
     header: "Patient",
     cell: ({ row }) => {
       const patient = row.original.patient;
+      const patientId = row.original.patientId;
       if (!patient) {
-        return <p className="text-14-medium text-red-500">Patient not found</p>;
+        return (
+          <div className="text-14-medium">
+            <p className="text-red-500">Patient Deleted</p>
+            <p className="text-xs text-gray-500">ID: {patientId}</p>
+          </div>
+        );
       }
       return <p className="text-14-medium">{patient.name}</p>;
     },
@@ -49,30 +55,6 @@ export const columns: ColumnDef<Appointment>[] = [
     ),
   },
   {
-    accessorKey: "primaryPhysician",
-    header: "Doctor",
-    cell: ({ row }) => {
-      const doctor = Doctors.find(
-        (doc) => doc.name === row.original.primaryPhysician
-      );
-      return (
-        <div className="flex items-center gap-3">
-          {doctor?.image && (
-            <Image
-              src={doctor.image}
-              alt={doctor.name ?? "Doctor"}
-              width={100}
-              height={100}
-              className="size-8"
-            />
-          )}
-
-          <p className="whitespace-nowrap">Dr. {doctor?.name}</p>
-        </div>
-      );
-    },
-  },
-  {
     id: "actions",
     header: () => <div className="pl-4">Actions</div>,
     cell: ({ row: { original: data } }) => {
@@ -82,6 +64,7 @@ export const columns: ColumnDef<Appointment>[] = [
             type="schedule"
             patientId={data.patientId}
             userId={data.userId}
+            practiceId={data.practiceId}
             appointment={data}
           />
 
@@ -89,6 +72,23 @@ export const columns: ColumnDef<Appointment>[] = [
             type="cancel"
             patientId={data.patientId}
             userId={data.userId}
+            practiceId={data.practiceId}
+            appointment={data}
+          />
+
+          <AppointmentModal
+            type="complete"
+            patientId={data.patientId}
+            userId={data.userId}
+            practiceId={data.practiceId}
+            appointment={data}
+          />
+
+          <AppointmentModal
+            type="no-show"
+            patientId={data.patientId}
+            userId={data.userId}
+            practiceId={data.practiceId}
             appointment={data}
           />
         </div>
