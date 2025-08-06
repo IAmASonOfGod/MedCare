@@ -175,6 +175,7 @@ const AppointmentForm = ({
               showTimeSelect
               dateFormat="MM/dd/yyyy - h:mm aa"
               error={form.formState.errors.schedule?.message}
+              practiceId={practiceId}
             />
 
             <div className="flex flex-col gap-6 xl:flex-row">

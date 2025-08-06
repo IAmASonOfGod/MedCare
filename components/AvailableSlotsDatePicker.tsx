@@ -7,6 +7,7 @@ import { FormControl } from "@/components/ui/form";
 import Image from "next/image";
 import { getAvailableSlotsForDate } from "@/lib/appointment-validation";
 import { generateTimeSlots } from "@/lib/utils";
+import { getPracticeSettings, getBusinessDaysFromSettings } from "@/lib/actions/practice.actions";
 
 interface AvailableSlotsDatePickerProps {
   selected: Date | null;
@@ -15,6 +16,7 @@ interface AvailableSlotsDatePickerProps {
   showTimeSelect?: boolean;
   wrapperClassName?: string;
   error?: string;
+  practiceId: string; // Add practiceId prop
 }
 
 const AvailableSlotsDatePicker: React.FC<AvailableSlotsDatePickerProps> = ({
@@ -24,11 +26,13 @@ const AvailableSlotsDatePicker: React.FC<AvailableSlotsDatePickerProps> = ({
   showTimeSelect = false,
   wrapperClassName = "date-picker",
   error,
+  practiceId,
 }) => {
   const [availableSlots, setAvailableSlots] = useState<Date[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [previousSelection, setPreviousSelection] = useState<Date | null>(null);
+  const [businessDays, setBusinessDays] = useState<number[]>([1, 2, 3, 4, 5]); // Default to Monday-Friday
 
   // Filter time options to only show available slots
   const filterTime = (time: Date) => {
@@ -80,11 +84,41 @@ const AvailableSlotsDatePicker: React.FC<AvailableSlotsDatePickerProps> = ({
     setPreviousSelection(date);
   };
 
+  // Load practice settings to get business days and time settings
+  useEffect(() => {
+    if (practiceId) {
+      getPracticeSettings(practiceId)
+        .then((settings) => {
+          if (settings) {
+            const days = getBusinessDaysFromSettings(settings);
+            setBusinessDays(days);
+          }
+        })
+        .catch((error) => {
+          console.error("Error loading practice settings:", error);
+          // Keep default business days
+        });
+    }
+  }, [practiceId]);
+
+  // Get dynamic time settings from practice settings
+  const getTimeSettings = () => {
+    // Default values
+    let minTime = new Date(new Date().setHours(8, 0, 0, 0));
+    let maxTime = new Date(new Date().setHours(17, 0, 0, 0));
+    let timeIntervals = 30;
+
+    // These will be updated when practice settings are loaded
+    return { minTime, maxTime, timeIntervals };
+  };
+
+  const { minTime, maxTime, timeIntervals } = getTimeSettings();
+
   // Load available slots when date changes
   useEffect(() => {
-    if (selected) {
+    if (selected && practiceId) {
       setIsLoading(true);
-      getAvailableSlotsForDate(selected)
+      getAvailableSlotsForDate(selected, practiceId)
         .then((slots) => {
           setAvailableSlots(slots);
         })
@@ -99,7 +133,7 @@ const AvailableSlotsDatePicker: React.FC<AvailableSlotsDatePickerProps> = ({
       setAvailableSlots([]);
       setIsLoading(false);
     }
-  }, [selected]);
+  }, [selected, practiceId]);
 
   // Show different placeholder based on loading state
   const getPlaceholderText = () => {
@@ -128,13 +162,13 @@ const AvailableSlotsDatePicker: React.FC<AvailableSlotsDatePickerProps> = ({
               wrapperClassName={wrapperClassName}
               filterTime={filterTime}
               timeFormat="HH:mm"
-              timeIntervals={30}
-              minTime={new Date(new Date().setHours(8, 0, 0, 0))}
-              maxTime={new Date(new Date().setHours(17, 0, 0, 0))}
+              timeIntervals={timeIntervals} // This will be overridden by practice settings
+              minTime={minTime} // This will be overridden by practice settings
+              maxTime={maxTime} // This will be overridden by practice settings
               filterDate={(date) => {
-                // Only allow weekdays (Monday = 1, Friday = 5)
+                // Use dynamic business days from practice settings
                 const day = date.getDay();
-                return day >= 1 && day <= 5;
+                return businessDays.includes(day);
               }}
               placeholderText={getPlaceholderText()}
               isClearable

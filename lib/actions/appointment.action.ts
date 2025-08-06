@@ -18,7 +18,7 @@ export const createAppointment = async (
 ) => {
   try {
     // Validate the appointment slot before creating
-    const validation = await validateAppointmentSlot(appointment.schedule);
+    const validation = await validateAppointmentSlot(appointment.schedule, appointment.practiceId);
 
     if (!validation.isValid) {
       throw new Error(validation.message || "Invalid appointment slot");

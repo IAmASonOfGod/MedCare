@@ -194,7 +194,7 @@ const Admin = () => {
       <main className="admin-main">
         <section className="w-full space-y-4">
           <div className="flex justify-between items-center">
-            <h1 className="header">Welcome 👋 </h1>
+          <h1 className="header">Welcome 👋 </h1>
             <DropdownMenu
               open={isDropdownOpen}
               onOpenChange={setIsDropdownOpen}
@@ -314,12 +314,12 @@ const Admin = () => {
                 : ""
             }`}
           >
-            <StatCard
-              type="appointments"
-              count={appointmentCounts.scheduledCount}
-              label="Scheduled appointments"
-              icon="/assets/icons/appointments.svg"
-            />
+          <StatCard
+            type="appointments"
+            count={appointmentCounts.scheduledCount}
+            label="Scheduled appointments"
+            icon="/assets/icons/appointments.svg"
+          />
           </div>
           <div
             onClick={() => handleStatusFilter("pending")}
@@ -329,12 +329,12 @@ const Admin = () => {
                 : ""
             }`}
           >
-            <StatCard
-              type="pending"
-              count={appointmentCounts.pendingCount}
-              label="Pending appointments"
-              icon="/assets/icons/pending.svg"
-            />
+          <StatCard
+            type="pending"
+            count={appointmentCounts.pendingCount}
+            label="Pending appointments"
+            icon="/assets/icons/pending.svg"
+          />
           </div>
           <div
             onClick={() => handleStatusFilter("cancelled")}
@@ -344,12 +344,12 @@ const Admin = () => {
                 : ""
             }`}
           >
-            <StatCard
-              type="cancelled"
-              count={appointmentCounts.cancelledCount}
-              label="Cancelled appointments"
-              icon="/assets/icons/cancelled.svg"
-            />
+          <StatCard
+            type="cancelled"
+            count={appointmentCounts.cancelledCount}
+            label="Cancelled appointments"
+            icon="/assets/icons/cancelled.svg"
+          />
           </div>
         </section>
 
@@ -449,63 +449,63 @@ const Admin = () => {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="px-3 py-2 border border-gray-300 dark:border-dark-500 rounded-lg bg-white dark:bg-dark-300 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500"
               />
-              <button
-                onClick={async () => {
-                  if (practice?.$id) {
-                    console.log("Manual refresh triggered...");
-                    setIsLoading(true);
-                    try {
-                      await fetchAppointments(currentPage);
-                      await fetchCounts();
-                    } finally {
-                      setIsLoading(false);
-                    }
-                  }
-                }}
-                disabled={isLoading}
+          <button
+            onClick={async () => {
+              if (practice?.$id) {
+                console.log("Manual refresh triggered...");
+                setIsLoading(true);
+                try {
+                  await fetchAppointments(currentPage);
+                  await fetchCounts();
+                } finally {
+                  setIsLoading(false);
+                }
+              }
+            }}
+            disabled={isLoading}
                 className="flex items-center gap-2 rounded-full px-4 py-2 text-base font-semibold shadow-md bg-gray-600 dark:bg-dark-400 text-white hover:bg-gray-700 dark:hover:bg-dark-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Refresh appointments data"
+            title="Refresh appointments data"
+          >
+            {isLoading ? (
+              <svg
+                className="h-5 w-5 animate-spin"
+                fill="none"
+                viewBox="0 0 24 24"
               >
-                {isLoading ? (
-                  <svg
-                    className="h-5 w-5 animate-spin"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    />
-                  </svg>
-                ) : (
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                    />
-                  </svg>
-                )}
-                {isLoading ? "Refreshing..." : "Refresh"}
-              </button>
-              <ThemeToggle />
-            </div>
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                />
+              </svg>
+            ) : (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                />
+              </svg>
+            )}
+            {isLoading ? "Refreshing..." : "Refresh"}
+          </button>
+          <ThemeToggle />
+        </div>
           </div>
 
           {isLoading ? (
@@ -519,26 +519,26 @@ const Admin = () => {
             />
           )}
 
-          {/* Pagination Info */}
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6 p-4 bg-gray-50 dark:bg-dark-400 rounded-lg">
+        {/* Pagination Info */}
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6 p-4 bg-gray-50 dark:bg-dark-400 rounded-lg">
             <div className="flex items-center gap-4">
-              <div className="text-sm text-gray-600 dark:text-gray-300">
-                Showing{" "}
+          <div className="text-sm text-gray-600 dark:text-gray-300">
+            Showing{" "}
                 <span className="font-semibold">
                   {(currentPage - 1) * 20 + 1}
                 </span>{" "}
-                to{" "}
-                <span className="font-semibold">
-                  {Math.min(
-                    currentPage * 20,
+            to{" "}
+            <span className="font-semibold">
+              {Math.min(
+                currentPage * 20,
                     getFilteredAppointments()?.pagination?.total || 0
-                  )}
-                </span>{" "}
-                of{" "}
-                <span className="font-semibold">
+              )}
+            </span>{" "}
+            of{" "}
+            <span className="font-semibold">
                   {getFilteredAppointments()?.pagination?.total || 0}
-                </span>{" "}
-                appointments
+            </span>{" "}
+            appointments
                 {statusFilter && (
                   <span className="ml-2 text-blue-600 dark:text-blue-400">
                     (filtered by {statusFilter})
@@ -553,68 +553,69 @@ const Admin = () => {
                   Clear filter
                 </button>
               )}
-            </div>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={
-                  !appointmentData.pagination?.hasPreviousPage || isLoading
-                }
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:border-gray-300 transition-all duration-200 shadow-sm"
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={
+                !appointmentData.pagination?.hasPreviousPage || isLoading
+              }
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:border-gray-300 transition-all duration-200 shadow-sm"
+            >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
               >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 19l-7-7 7-7"
-                  />
-                </svg>
-                Previous
-              </button>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
+              Previous
+            </button>
 
               <div className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-gray-600 dark:bg-dark-400 rounded-lg shadow-sm">
-                <span className="text-gray-300">Page</span>
-                <span className="font-semibold">{currentPage}</span>
-                <span className="text-gray-300">of</span>
-                <span className="font-semibold">
-                  {appointmentData.pagination?.totalPages || 1}
-                </span>
-              </div>
-
-              <button
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={!appointmentData.pagination?.hasNextPage || isLoading}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:border-gray-300 transition-all duration-200 shadow-sm"
-              >
-                Next
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 5l7 7-7 7"
-                  />
-                </svg>
-              </button>
+              <span className="text-gray-300">Page</span>
+              <span className="font-semibold">{currentPage}</span>
+              <span className="text-gray-300">of</span>
+              <span className="font-semibold">
+                {appointmentData.pagination?.totalPages || 1}
+              </span>
             </div>
+
+            <button
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={!appointmentData.pagination?.hasNextPage || isLoading}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:border-gray-300 transition-all duration-200 shadow-sm"
+            >
+              Next
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            </button>
           </div>
+        </div>
         </CollapsibleSection>
       </main>
 
       <PracticeSettingsModal
         open={isPracticeSettingsOpen}
         onOpenChange={setIsPracticeSettingsOpen}
+        practiceId={practice?.$id || ""}
       />
     </div>
   );

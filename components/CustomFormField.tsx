@@ -43,6 +43,7 @@ interface CustomProps {
   error?: string; // Add error prop for validation messages
   type?: string; // Add type prop for input type (e.g., number, text)
   selectContentClassName?: string; // Add prop for custom SelectContent styling
+  practiceId?: string; // Add practiceId prop for appointment date picker
 }
 
 const RenderField = ({ field, props }: { field: any; props: CustomProps }) => {
@@ -142,6 +143,7 @@ const RenderField = ({ field, props }: { field: any; props: CustomProps }) => {
       return (
         <FormControl>
           <Select
+            value={field.value ? String(field.value) : undefined}
             onValueChange={(value) => {
               if (props.name === "consultationInterval") {
                 field.onChange(Number(value));
@@ -149,7 +151,6 @@ const RenderField = ({ field, props }: { field: any; props: CustomProps }) => {
                 field.onChange(value);
               }
             }}
-            defaultValue={field.value ? String(field.value) : undefined}
           >
             <FormControl>
               <SelectTrigger className="shad-select-trigger">
@@ -190,6 +191,7 @@ const RenderField = ({ field, props }: { field: any; props: CustomProps }) => {
           showTimeSelect={showTimeSelect ?? true}
           wrapperClassName="date-picker"
           error={props.error}
+          practiceId={props.practiceId || ""}
         />
       );
     default:

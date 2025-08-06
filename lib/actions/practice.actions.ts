@@ -1,11 +1,27 @@
 "use server";
 import { ID, Query } from "node-appwrite";
-import { databases } from "../appwrite.config";
+import { databases, PRACTICES_COLLECTION_ID } from "../appwrite.config";
 
-// Replace with your actual database and collection IDs
-const DATABASE_ID = process.env.DATABASE_ID!;
-const PRACTICES_COLLECTION_ID = process.env.PRACTICES_COLLECTION_ID!;
-const PATIENTS_COLLECTION_ID = process.env.PATIENT_COLLECTION_ID!;
+// Validate environment variables
+const DATABASE_ID = process.env.DATABASE_ID;
+const PATIENTS_COLLECTION_ID = process.env.PATIENT_COLLECTION_ID;
+
+if (!DATABASE_ID) {
+  throw new Error("DATABASE_ID environment variable is not set");
+}
+
+if (!PATIENTS_COLLECTION_ID) {
+  throw new Error("PATIENT_COLLECTION_ID environment variable is not set");
+}
+
+if (!PRACTICES_COLLECTION_ID) {
+  throw new Error("PRACTICES_COLLECTION_ID environment variable is not set");
+}
+
+// Type assertions after validation
+const validatedDatabaseId = DATABASE_ID as string;
+const validatedPatientsCollectionId = PATIENTS_COLLECTION_ID as string;
+const validatedPracticesCollectionId = PRACTICES_COLLECTION_ID as string;
 
 export async function createPractice(practice: Record<string, any>) {
   try {
@@ -21,8 +37,8 @@ export async function createPractice(practice: Record<string, any>) {
       .join(" ");
 
     const response = await databases.createDocument(
-      DATABASE_ID,
-      PRACTICES_COLLECTION_ID,
+      validatedDatabaseId,
+      validatedPracticesCollectionId,
       ID.unique(),
       {
         ...practice,
@@ -39,8 +55,8 @@ export async function createPractice(practice: Record<string, any>) {
 export async function fetchPracticeByAdminEmail(email: string) {
   try {
     const result = await databases.listDocuments(
-      DATABASE_ID,
-      PRACTICES_COLLECTION_ID,
+      validatedDatabaseId,
+      validatedPracticesCollectionId,
       [Query.equal("contactEmail", [email])]
     );
     return result.documents[0] || null;
@@ -53,14 +69,14 @@ export async function fetchPracticeByAdminEmail(email: string) {
 export async function fetchPracticeByPatientId(patientId: string) {
   try {
     const patient = (await databases.getDocument(
-      DATABASE_ID,
-      PATIENTS_COLLECTION_ID,
+      validatedDatabaseId,
+      validatedPatientsCollectionId,
       patientId
     )) as { practiceId?: string };
     if (!patient.practiceId) return null;
     const practice = await databases.getDocument(
-      DATABASE_ID,
-      PRACTICES_COLLECTION_ID,
+      validatedDatabaseId,
+      validatedPracticesCollectionId,
       patient.practiceId
     );
     return practice || null;
@@ -87,8 +103,8 @@ export async function fetchPractices({
   // Add more filters as needed
 
   const result = await databases.listDocuments(
-    DATABASE_ID,
-    PRACTICES_COLLECTION_ID,
+    validatedDatabaseId,
+    validatedPracticesCollectionId,
     queries
   );
   return result.documents;
@@ -96,9 +112,186 @@ export async function fetchPractices({
 
 async function fetchPatientsForPractice(practiceId: string) {
   const result = await databases.listDocuments(
-    process.env.NEXT_PUBLIC_DATABASE_ID!,
-    process.env.NEXT_PUBLIC_PATIENTS_COLLECTION_ID!,
+    validatedDatabaseId,
+    validatedPatientsCollectionId,
     [Query.equal("practiceId", [practiceId])]
   );
   return result.documents;
 }
+
+// Updated interface to match your existing schema
+export interface PracticeSettings {
+  $id?: string;
+  practiceName: string;
+  practiceType: string;
+  contactEmail: string;
+  contactPhone: string;
+  streetAddress: string;
+  suburb: string;
+  city: string;
+  province: string;
+  postalCode: string;
+  country: string;
+
+  // Operating hours fields
+  mondayOpen?: string;
+  mondayClose?: string;
+  mondayClosed?: boolean;
+  tuesdayOpen?: string;
+  tuesdayClose?: string;
+  tuesdayClosed?: boolean;
+  wednesdayOpen?: string;
+  wednesdayClose?: string;
+  wednesdayClosed?: boolean;
+  thursdayOpen?: string;
+  thursdayClose?: string;
+  thursdayClosed?: boolean;
+  fridayOpen?: string;
+  fridayClose?: string;
+  fridayClosed?: boolean;
+  saturdayOpen?: string;
+  saturdayClose?: string;
+  saturdayClosed?: boolean;
+  sundayOpen?: string;
+  sundayClose?: string;
+  sundayClosed?: boolean;
+
+  // Public holidays fields
+  publicHolidaysOpen?: string;
+  publicHolidaysClose?: string;
+  publicHolidaysClosed?: boolean;
+
+  // Booking interval
+  consultationInterval?: number;
+
+  $createdAt?: string;
+  $updatedAt?: string;
+}
+
+export const savePracticeSettings = async (
+  practiceId: string,
+  settings: Partial<PracticeSettings>
+) => {
+  try {
+    // Update the existing practice document with new settings
+    const result = await databases.updateDocument(
+      validatedDatabaseId,
+      validatedPracticesCollectionId,
+      practiceId,
+      settings
+    );
+    return result;
+  } catch (error) {
+    console.error("Error saving practice settings:", error);
+    // Throw a user-friendly error message
+    throw new Error("Failed to save practice settings. Please try again.");
+  }
+};
+
+export const getPracticeSettings = async (
+  practiceId: string
+): Promise<PracticeSettings | null> => {
+  try {
+    const result = await databases.getDocument(
+      validatedDatabaseId,
+      validatedPracticesCollectionId,
+      practiceId
+    );
+    return result as unknown as PracticeSettings;
+  } catch (error) {
+    console.error("Error getting practice settings:", error);
+    return null;
+  }
+};
+
+// Helper function to get business days from practice settings
+export const getBusinessDaysFromSettings = (
+  settings: PracticeSettings
+): number[] => {
+  const businessDays: number[] = [];
+
+  // Map day names to day numbers (0 = Sunday, 1 = Monday, etc.)
+  const dayChecks = [
+    { day: 1, closed: settings.mondayClosed, open: settings.mondayOpen },
+    { day: 2, closed: settings.tuesdayClosed, open: settings.tuesdayOpen },
+    { day: 3, closed: settings.wednesdayClosed, open: settings.wednesdayOpen },
+    { day: 4, closed: settings.thursdayClosed, open: settings.thursdayOpen },
+    { day: 5, closed: settings.fridayClosed, open: settings.fridayOpen },
+    { day: 6, closed: settings.saturdayClosed, open: settings.saturdayOpen },
+    { day: 0, closed: settings.sundayClosed, open: settings.sundayOpen },
+  ];
+
+  dayChecks.forEach(({ day, closed, open }) => {
+    if (!closed && open) {
+      businessDays.push(day);
+    }
+  });
+
+  return businessDays;
+};
+
+// Helper function to get business hours for a specific day
+export const getBusinessHoursForDay = (
+  settings: PracticeSettings,
+  dayOfWeek: number
+): {
+  startHour: number;
+  startMinute: number;
+  endHour: number;
+  endMinute: number;
+} | null => {
+  const dayMappings = {
+    0: {
+      open: settings.sundayOpen,
+      close: settings.sundayClose,
+      closed: settings.sundayClosed,
+    },
+    1: {
+      open: settings.mondayOpen,
+      close: settings.mondayClose,
+      closed: settings.mondayClosed,
+    },
+    2: {
+      open: settings.tuesdayOpen,
+      close: settings.tuesdayClose,
+      closed: settings.tuesdayClosed,
+    },
+    3: {
+      open: settings.wednesdayOpen,
+      close: settings.wednesdayClose,
+      closed: settings.wednesdayClosed,
+    },
+    4: {
+      open: settings.thursdayOpen,
+      close: settings.thursdayClose,
+      closed: settings.thursdayClosed,
+    },
+    5: {
+      open: settings.fridayOpen,
+      close: settings.fridayClose,
+      closed: settings.fridayClosed,
+    },
+    6: {
+      open: settings.saturdayOpen,
+      close: settings.saturdayClose,
+      closed: settings.saturdayClosed,
+    },
+  };
+
+  const dayHours = dayMappings[dayOfWeek as keyof typeof dayMappings];
+
+  if (!dayHours || dayHours.closed || !dayHours.open || !dayHours.close) {
+    return null;
+  }
+
+  // Parse time strings (e.g., "08:00" -> { hour: 8, minute: 0 })
+  const [startHour, startMinute] = dayHours.open.split(":").map(Number);
+  const [endHour, endMinute] = dayHours.close.split(":").map(Number);
+
+  return {
+    startHour,
+    startMinute,
+    endHour,
+    endMinute,
+  };
+};

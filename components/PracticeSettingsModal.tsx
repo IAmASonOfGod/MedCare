@@ -17,6 +17,12 @@ import CustomFormField from "./CustomFormField";
 import { FormFieldType } from "./forms/PatientForm";
 import SubmitButton from "./SubmitButton";
 import { SelectItem } from "./ui/select";
+import {
+  savePracticeSettings,
+  getPracticeSettings,
+} from "@/lib/actions/practice.actions";
+import { toast } from "sonner";
+import { useEffect } from "react";
 
 const PracticeSettingsSchema = z.object({
   // Operating Hours
@@ -44,8 +50,12 @@ const PracticeSettingsSchema = z.object({
   publicHolidaysOpen: z.string().optional(),
   publicHolidaysClose: z.string().optional(),
   publicHolidaysClosed: z.boolean(),
-  // Consultation Intervals
-  consultationInterval: z.enum(["15", "30", "60", "120"]),
+  // Consultation Intervals - accept strings and convert to numbers
+  consultationInterval: z
+    .string()
+    .refine((val) => ["15", "30", "60", "120"].includes(val), {
+      message: "Consultation interval must be 15, 30, 60, or 120 minutes",
+    }),
 });
 
 type PracticeSettingsFormData = z.infer<typeof PracticeSettingsSchema>;
@@ -53,11 +63,13 @@ type PracticeSettingsFormData = z.infer<typeof PracticeSettingsSchema>;
 interface PracticeSettingsModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  practiceId: string; // Add practiceId prop
 }
 
 const PracticeSettingsModal: React.FC<PracticeSettingsModalProps> = ({
   open,
   onOpenChange,
+  practiceId,
 }) => {
   const [isLoading, setIsLoading] = useState(false);
 
@@ -94,13 +106,98 @@ const PracticeSettingsModal: React.FC<PracticeSettingsModalProps> = ({
     },
   });
 
+  // Load existing practice settings when modal opens
+  useEffect(() => {
+    if (open && practiceId) {
+      const loadSettings = async () => {
+        try {
+          const settings = await getPracticeSettings(practiceId);
+          if (settings) {
+            // Update form with existing settings
+            form.reset({
+              mondayOpen: settings.mondayOpen || "09:00",
+              mondayClose: settings.mondayClose || "17:00",
+              mondayClosed: settings.mondayClosed || false,
+              tuesdayOpen: settings.tuesdayOpen || "09:00",
+              tuesdayClose: settings.tuesdayClose || "17:00",
+              tuesdayClosed: settings.tuesdayClosed || false,
+              wednesdayOpen: settings.wednesdayOpen || "09:00",
+              wednesdayClose: settings.wednesdayClose || "17:00",
+              wednesdayClosed: settings.wednesdayClosed || false,
+              thursdayOpen: settings.thursdayOpen || "09:00",
+              thursdayClose: settings.thursdayClose || "17:00",
+              thursdayClosed: settings.thursdayClosed || false,
+              fridayOpen: settings.fridayOpen || "09:00",
+              fridayClose: settings.fridayClose || "17:00",
+              fridayClosed: settings.fridayClosed || false,
+              saturdayOpen: settings.saturdayOpen || "09:00",
+              saturdayClose: settings.saturdayClose || "17:00",
+              saturdayClosed: settings.saturdayClosed || false,
+              sundayOpen: settings.sundayOpen || "09:00",
+              sundayClose: settings.sundayClose || "17:00",
+              sundayClosed: settings.sundayClosed || true,
+              publicHolidaysOpen: settings.publicHolidaysOpen || "09:00",
+              publicHolidaysClose: settings.publicHolidaysClose || "17:00",
+              publicHolidaysClosed: settings.publicHolidaysClosed || true,
+              consultationInterval:
+                settings.consultationInterval?.toString() || "30",
+            });
+          }
+        } catch (error) {
+          console.error("Error loading practice settings:", error);
+          // Keep default values if loading fails
+        }
+      };
+
+      loadSettings();
+    }
+  }, [open, practiceId, form]);
+
   const onSubmit = async (data: any) => {
     setIsLoading(true);
     try {
-      console.log("Practice settings data:", data);
+      // Transform form data to match your existing schema structure
+      const settings = {
+        // Operating hours
+        mondayOpen: data.mondayClosed ? null : data.mondayOpen,
+        mondayClose: data.mondayClosed ? null : data.mondayClose,
+        mondayClosed: data.mondayClosed,
+        tuesdayOpen: data.tuesdayClosed ? null : data.tuesdayOpen,
+        tuesdayClose: data.tuesdayClosed ? null : data.tuesdayClose,
+        tuesdayClosed: data.tuesdayClosed,
+        wednesdayOpen: data.wednesdayClosed ? null : data.wednesdayOpen,
+        wednesdayClose: data.wednesdayClosed ? null : data.wednesdayClose,
+        wednesdayClosed: data.wednesdayClosed,
+        thursdayOpen: data.thursdayClosed ? null : data.thursdayOpen,
+        thursdayClose: data.thursdayClosed ? null : data.thursdayClose,
+        thursdayClosed: data.thursdayClosed,
+        fridayOpen: data.fridayClosed ? null : data.fridayOpen,
+        fridayClose: data.fridayClosed ? null : data.fridayClose,
+        fridayClosed: data.fridayClosed,
+        saturdayOpen: data.saturdayClosed ? null : data.saturdayOpen,
+        saturdayClose: data.saturdayClosed ? null : data.saturdayClose,
+        saturdayClosed: data.saturdayClosed,
+        sundayOpen: data.sundayClosed ? null : data.sundayOpen,
+        sundayClose: data.sundayClosed ? null : data.sundayClose,
+        sundayClosed: data.sundayClosed,
+        publicHolidaysOpen: data.publicHolidaysClosed
+          ? null
+          : data.publicHolidaysOpen,
+        publicHolidaysClose: data.publicHolidaysClosed
+          ? null
+          : data.publicHolidaysClose,
+        publicHolidaysClosed: data.publicHolidaysClosed,
+        // Booking interval - convert string to number
+        consultationInterval: parseInt(data.consultationInterval, 10),
+      };
+
+      await savePracticeSettings(practiceId, settings);
+      toast.success("Practice settings saved successfully!");
       onOpenChange(false);
     } catch (error) {
       console.error("Error saving practice settings:", error);
+      // Show user-friendly error message instead of technical details
+      toast.error("Failed to save practice settings. Please try again.");
     } finally {
       setIsLoading(false);
     }
