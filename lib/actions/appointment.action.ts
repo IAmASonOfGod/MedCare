@@ -12,13 +12,20 @@ import { formatDateTime, parseStringify } from "../utils";
 import { Appointment } from "@/types/appwrite.types";
 import { revalidatePath } from "next/cache";
 import { validateAppointmentSlot } from "../appointment-validation";
+import {
+  getPracticeSettings,
+  getBusinessHoursForDay,
+} from "./practice.actions";
 
 export const createAppointment = async (
   appointment: CreateAppointmentParams
 ) => {
   try {
     // Validate the appointment slot before creating
-    const validation = await validateAppointmentSlot(appointment.schedule, appointment.practiceId);
+    const validation = await validateAppointmentSlot(
+      appointment.schedule,
+      appointment.practiceId
+    );
 
     if (!validation.isValid) {
       throw new Error(validation.message || "Invalid appointment slot");
@@ -65,7 +72,6 @@ export const getRecentAppointmentList = async (
       Query.offset(offset),
     ];
 
-    // Add practice filter if practiceId is provided
     if (practiceId) {
       queries.push(Query.equal("practiceId", [practiceId]));
     }
@@ -76,7 +82,6 @@ export const getRecentAppointmentList = async (
       queries
     );
 
-    // Fetch all patient data in a single query to avoid N+1 problem
     const patientIds = appointments.documents.map(
       (appointment: any) => appointment.patientId
     );
@@ -90,13 +95,11 @@ export const getRecentAppointmentList = async (
         [Query.equal("$id", uniquePatientIds)]
       );
 
-      // Create a map for quick patient lookup
       patients.documents.forEach((patient: any) => {
         patientsMap.set(patient.$id, patient);
       });
     }
 
-    // Attach patient data to appointments
     const appointmentsWithPatients = appointments.documents.map(
       (appointment: any) => ({
         ...appointment,
@@ -126,14 +129,12 @@ export const getRecentAppointmentList = async (
 // Get appointment counts for stats (without pagination)
 export const getAppointmentCounts = async (practiceId?: string) => {
   try {
-    const queries = [];
+    const queries: any[] = [];
 
-    // Add practice filter if practiceId is provided
     if (practiceId) {
       queries.push(Query.equal("practiceId", [practiceId]));
     }
 
-    // Get scheduled appointments count
     const scheduledQuery = [...queries, Query.equal("status", ["scheduled"])];
     const scheduledAppointments = await databases.listDocuments(
       DATABASE_ID!,
@@ -141,7 +142,6 @@ export const getAppointmentCounts = async (practiceId?: string) => {
       scheduledQuery
     );
 
-    // Get pending appointments count
     const pendingQuery = [...queries, Query.equal("status", ["pending"])];
     const pendingAppointments = await databases.listDocuments(
       DATABASE_ID!,
@@ -149,7 +149,6 @@ export const getAppointmentCounts = async (practiceId?: string) => {
       pendingQuery
     );
 
-    // Get cancelled appointments count
     const cancelledQuery = [...queries, Query.equal("status", ["cancelled"])];
     const cancelledAppointments = await databases.listDocuments(
       DATABASE_ID!,
@@ -172,7 +171,6 @@ export const getAppointmentCounts = async (practiceId?: string) => {
   }
 };
 
-// Helper function to check if a patient exists
 export const checkPatientExists = async (patientId: string) => {
   try {
     const patient = await databases.getDocument(
@@ -188,7 +186,6 @@ export const checkPatientExists = async (patientId: string) => {
   }
 };
 
-// Function to find and optionally delete orphaned appointments
 export const findOrphanedAppointments = async (practiceId?: string) => {
   try {
     const queries = [Query.orderDesc("$createdAt")];
@@ -203,7 +200,7 @@ export const findOrphanedAppointments = async (practiceId?: string) => {
       queries
     );
 
-    const orphanedAppointments = [];
+    const orphanedAppointments: any[] = [];
 
     for (const appointment of appointments.documents as any[]) {
       try {
@@ -248,18 +245,6 @@ export const updateAppointment = async ({
       throw new Error("Appointment not found");
     }
 
-    // const smsMessage = `
-    // Hi, it's CarePulse.
-    // ${
-    //   type === "scheduled"
-    //     ? `Your appointment has been scheduled for ${
-    //         formatDateTime(appointment.schedule!).dateTime
-    //       } with Dr. ${appointment.primaryPhysician}.`
-    //     : `We regret to inform you that your appointment has been cancelled for the following reason: ${appointment.cancellationReason}.`
-    // }`;
-
-    // await sendSMSNotification(userId, smsMessage);
-
     revalidatePath("/admin");
 
     return parseStringify(updatedAppointment);
@@ -276,7 +261,6 @@ export const sendSMSNotification = async (userId: string, content: string) => {
       [],
       [userId]
     );
-
     return parseStringify(message);
   } catch (error) {
     console.log(error);
@@ -338,7 +322,7 @@ export const getTodaysAppointments = async (practiceId: string) => {
       Query.greaterThanEqual("schedule", startOfDay),
       Query.lessThanEqual("schedule", endOfDay),
       Query.orderAsc("schedule"),
-      Query.limit(100), // Reasonable limit for daily appointments
+      Query.limit(100),
     ];
 
     const appointments = await databases.listDocuments(
@@ -433,7 +417,6 @@ export const getAppointmentAnalytics = async (
       queries
     );
 
-    // Calculate analytics
     const total = appointments.total;
     const scheduled = appointments.documents.filter(
       (apt: any) => apt.status === "scheduled"
@@ -448,7 +431,6 @@ export const getAppointmentAnalytics = async (
       (apt: any) => apt.status === "no-show"
     ).length;
 
-    // Doctor-wise breakdown
     const doctorStats = new Map();
     appointments.documents.forEach((apt: any) => {
       const doctor = apt.primaryPhysician;
@@ -463,7 +445,7 @@ export const getAppointmentAnalytics = async (
       }
       const stats = doctorStats.get(doctor);
       stats.total++;
-      stats[apt.status]++;
+      stats[apt.status] = (stats[apt.status] || 0) + 1;
     });
 
     return {
@@ -473,9 +455,11 @@ export const getAppointmentAnalytics = async (
       completed,
       cancelled,
       noShows,
-      completionRate: total > 0 ? ((completed / total) * 100).toFixed(1) : 0,
-      cancellationRate: total > 0 ? ((cancelled / total) * 100).toFixed(1) : 0,
-      noShowRate: total > 0 ? ((noShows / total) * 100).toFixed(1) : 0,
+      completionRate:
+        total > 0 ? Number(((completed / total) * 100).toFixed(1)) : 0,
+      cancellationRate:
+        total > 0 ? Number(((cancelled / total) * 100).toFixed(1)) : 0,
+      noShowRate: total > 0 ? Number(((noShows / total) * 100).toFixed(1)) : 0,
       doctorStats: Object.fromEntries(doctorStats),
     };
   } catch (error) {
@@ -484,56 +468,7 @@ export const getAppointmentAnalytics = async (
   }
 };
 
-// Get appointment trends over time
-export const getAppointmentTrends = async (
-  practiceId: string,
-  days: number = 30
-) => {
-  try {
-    const now = new Date();
-    const startDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
-
-    const queries = [
-      Query.equal("practiceId", [practiceId]),
-      Query.greaterThanEqual("schedule", startDate.toISOString()),
-      Query.lessThanEqual("schedule", now.toISOString()),
-      Query.orderAsc("schedule"),
-    ];
-
-    const appointments = await databases.listDocuments(
-      DATABASE_ID!,
-      APPOINTMENT_COLLECTION_ID!,
-      queries
-    );
-
-    // Group by date
-    const dailyStats = new Map();
-    appointments.documents.forEach((apt: any) => {
-      const date = new Date(apt.schedule).toISOString().split("T")[0];
-      if (!dailyStats.has(date)) {
-        dailyStats.set(date, {
-          total: 0,
-          scheduled: 0,
-          completed: 0,
-          cancelled: 0,
-        });
-      }
-      const stats = dailyStats.get(date);
-      stats.total++;
-      stats[apt.status]++;
-    });
-
-    return Array.from(dailyStats.entries()).map(([date, stats]) => ({
-      date,
-      ...stats,
-    }));
-  } catch (error) {
-    console.log(error);
-    throw error;
-  }
-};
-
-// Get capacity utilization
+// Get capacity utilization based on practice settings
 export const getCapacityUtilization = async (
   practiceId: string,
   date: string
@@ -544,7 +479,8 @@ export const getCapacityUtilization = async (
     const endOfDay = new Date(date);
     endOfDay.setHours(23, 59, 59, 999);
 
-    // Get appointments for the day
+    console.log("[Capacity] date:", date);
+
     const appointmentQueries = [
       Query.equal("practiceId", [practiceId]),
       Query.greaterThanEqual("schedule", startOfDay.toISOString()),
@@ -557,31 +493,97 @@ export const getCapacityUtilization = async (
       appointmentQueries
     );
 
-    // Get available providers for the practice
-    // const providers = await getHealthcareProviders(practiceId); // This line is removed
-    // const availableProviders = providers.documents.filter( // This line is removed
-    //   (provider: any) => provider.isActive && provider.isAvailable // This line is removed
-    // ); // This line is removed
+    console.log("[Capacity] appointments total:", appointments.total);
 
-    // Calculate total capacity based on available providers // This line is removed
-    // Assuming 9 hours * 2 slots per hour = 18 slots per provider // This line is removed
-    const slotsPerProvider = 18; // 9 hours * 2 slots per hour // This line is removed
-    const totalCapacity = 0; // This line is removed
+    const settings = await getPracticeSettings(practiceId);
+    console.log(
+      "[Capacity] settings interval/raw:",
+      settings?.consultationInterval
+    );
+    if (!settings) {
+      return {
+        date,
+        totalCapacity: 0,
+        bookedSlots: 0,
+        availableSlots: 0,
+        utilizationRate: 0,
+      };
+    }
 
-    const bookedSlots = appointments.documents.filter(
+    const dayOfWeek = new Date(date).getDay();
+    // In Next.js, functions exported from a "use server" module may be proxied and return a Promise
+    // even if they are synchronous utilities. Await to handle both Promise and non-Promise returns.
+    const hours = await (getBusinessHoursForDay as any)(
+      settings as any,
+      dayOfWeek
+    );
+    console.log("[Capacity] hours:", hours);
+    if (!hours) {
+      return {
+        date,
+        totalCapacity: 0,
+        bookedSlots: 0,
+        availableSlots: 0,
+        utilizationRate: 0,
+      };
+    }
+
+    let intervalMinutes = Number((settings as any).consultationInterval);
+    if (!Number.isFinite(intervalMinutes) || intervalMinutes <= 0)
+      intervalMinutes = 30;
+    console.log("[Capacity] intervalMinutes:", intervalMinutes);
+
+    const start = new Date(date);
+    start.setHours(hours.startHour, hours.startMinute, 0, 0);
+    const end = new Date(date);
+    end.setHours(hours.endHour, hours.endMinute, 0, 0);
+
+    const totalMinutesRaw = Math.floor(
+      (end.getTime() - start.getTime()) / 60000
+    );
+    const totalMinutes =
+      Number.isFinite(totalMinutesRaw) && totalMinutesRaw > 0
+        ? totalMinutesRaw
+        : 0;
+    const totalCapacityRaw =
+      intervalMinutes > 0 ? Math.floor(totalMinutes / intervalMinutes) : 0;
+    const totalCapacity =
+      Number.isFinite(totalCapacityRaw) && totalCapacityRaw >= 0
+        ? totalCapacityRaw
+        : 0;
+
+    console.log(
+      "[Capacity] totalMinutes:",
+      totalMinutes,
+      "totalCapacity:",
+      totalCapacity
+    );
+
+    const bookedSlots = (appointments.documents as any[]).filter(
       (apt: any) => apt.status === "scheduled" || apt.status === "completed"
     ).length;
+    console.log("[Capacity] bookedSlots:", bookedSlots);
+
+    const availableSlotsRaw = totalCapacity - bookedSlots;
+    const availableSlots = availableSlotsRaw > 0 ? availableSlotsRaw : 0;
+    const utilizationRate =
+      totalCapacity > 0
+        ? Number(((bookedSlots / totalCapacity) * 100).toFixed(1))
+        : 0;
+
+    console.log(
+      "[Capacity] availableSlots:",
+      availableSlots,
+      "utilizationRate:",
+      utilizationRate
+    );
 
     return {
       date,
       totalCapacity,
       bookedSlots,
-      availableSlots: totalCapacity - bookedSlots,
-      utilizationRate:
-        totalCapacity > 0
-          ? ((bookedSlots / totalCapacity) * 100).toFixed(1)
-          : "0",
-      activeProviders: 0, // This line is removed
+      availableSlots,
+      utilizationRate,
     };
   } catch (error) {
     console.log(error);

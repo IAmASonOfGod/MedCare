@@ -42,6 +42,10 @@ export async function createPractice(practice: Record<string, any>) {
       ID.unique(),
       {
         ...practice,
+        consultationInterval:
+          practice.consultationInterval != null
+            ? Number(practice.consultationInterval)
+            : practice.consultationInterval,
         searchable,
       }
     );
@@ -93,7 +97,7 @@ export async function fetchPractices({
   search?: string;
   location?: string;
 }) {
-  const queries = [];
+  const queries = [] as any[];
   if (search) {
     queries.push(Query.search("searchable", search));
   }
@@ -178,7 +182,13 @@ export const savePracticeSettings = async (
       validatedDatabaseId,
       validatedPracticesCollectionId,
       practiceId,
-      settings
+      {
+        ...settings,
+        consultationInterval:
+          settings.consultationInterval != null
+            ? Number(settings.consultationInterval)
+            : settings.consultationInterval,
+      }
     );
     return result;
   } catch (error) {
@@ -197,7 +207,14 @@ export const getPracticeSettings = async (
       validatedPracticesCollectionId,
       practiceId
     );
-    return result as unknown as PracticeSettings;
+    const coerced = {
+      ...(result as any),
+      consultationInterval:
+        (result as any).consultationInterval != null
+          ? Number((result as any).consultationInterval)
+          : undefined,
+    } as PracticeSettings;
+    return coerced;
   } catch (error) {
     console.error("Error getting practice settings:", error);
     return null;
@@ -276,22 +293,46 @@ export const getBusinessHoursForDay = (
       close: settings.saturdayClose,
       closed: settings.saturdayClosed,
     },
-  };
+  } as const;
 
   const dayHours = dayMappings[dayOfWeek as keyof typeof dayMappings];
 
-  if (!dayHours || dayHours.closed || !dayHours.open || !dayHours.close) {
+  console.log("[Hours] dayOfWeek:", dayOfWeek, "raw:", {
+    open: dayHours?.open,
+    close: dayHours?.close,
+    closed: dayHours?.closed,
+  });
+
+  if (!dayHours || dayHours.closed || !dayHours.open || !dayHours.close)
     return null;
-  }
 
-  // Parse time strings (e.g., "08:00" -> { hour: 8, minute: 0 })
-  const [startHour, startMinute] = dayHours.open.split(":").map(Number);
-  const [endHour, endMinute] = dayHours.close.split(":").map(Number);
+  // Ensure HH:MM format, otherwise bail out
+  const openParts = String(dayHours.open).split(":");
+  const closeParts = String(dayHours.close).split(":");
+  if (openParts.length < 2 || closeParts.length < 2) return null;
 
-  return {
+  const [startHourRaw, startMinuteRaw] = openParts;
+  const [endHourRaw, endMinuteRaw] = closeParts;
+  const startHour = Number(startHourRaw);
+  const startMinute = Number(startMinuteRaw);
+  const endHour = Number(endHourRaw);
+  const endMinute = Number(endMinuteRaw);
+
+  console.log("[Hours] parsed:", {
     startHour,
     startMinute,
     endHour,
     endMinute,
-  };
+  });
+
+  if (
+    Number.isNaN(startHour) ||
+    Number.isNaN(startMinute) ||
+    Number.isNaN(endHour) ||
+    Number.isNaN(endMinute)
+  ) {
+    return null;
+  }
+
+  return { startHour, startMinute, endHour, endMinute };
 };

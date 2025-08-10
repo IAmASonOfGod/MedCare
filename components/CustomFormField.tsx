@@ -11,7 +11,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Control } from "react-hook-form";
 import { FormFieldType } from "./forms/PatientForm";
-import React, { createContext, useContext, useState } from "react";
+import React from "react";
 import Image from "next/image";
 import "react-phone-number-input/style.css";
 import PhoneInput from "react-phone-number-input";
@@ -21,10 +21,6 @@ import { Select, SelectContent, SelectTrigger, SelectValue } from "./ui/select";
 import { Textarea } from "./ui/textarea";
 import { Checkbox } from "./ui/checkbox";
 import AvailableSlotsDatePicker from "./AvailableSlotsDatePicker";
-import { usePractice } from "../components/PracticeContext";
-import { Query } from "node-appwrite"; // or "appwrite" if using the browser SDK
-
-type E164Number = string & { __tag: "E164Number" };
 
 interface CustomProps {
   control: Control<any>;
@@ -39,54 +35,28 @@ interface CustomProps {
   showTimeSelect?: boolean;
   children?: React.ReactNode;
   renderSkeleton?: (field: any) => React.ReactNode;
-
-  error?: string; // Add error prop for validation messages
-  type?: string; // Add type prop for input type (e.g., number, text)
-  selectContentClassName?: string; // Add prop for custom SelectContent styling
-  practiceId?: string; // Add practiceId prop for appointment date picker
+  error?: string;
+  type?: string;
+  selectContentClassName?: string;
+  practiceId?: string;
 }
 
 const RenderField = ({ field, props }: { field: any; props: CustomProps }) => {
-  const {
-    fieldType,
-    iconAlt,
-    iconSrc,
-    placeholder,
-    showTimeSelect,
-    dateFormat,
-    renderSkeleton,
-    type, // Add type here
-  } = props;
+  const { fieldType, iconAlt, iconSrc, placeholder, showTimeSelect, dateFormat, renderSkeleton, type } = props;
 
   switch (fieldType) {
     case FormFieldType.INPUT:
       return (
-        <div
-          className={`flex rounded-md border border-dark-500 bg-dark-400 ${
-            props.disabled
-              ? "bg-gray-200 dark:bg-gray-700 cursor-not-allowed"
-              : ""
-          }`}
-        >
+        <div className={`flex rounded-md border border-dark-500 bg-dark-400 ${props.disabled ? "bg-gray-200 dark:bg-gray-700 cursor-not-allowed" : ""}`}>
           {iconSrc && (
-            <Image
-              src={iconSrc}
-              height={24}
-              width={24}
-              alt={iconAlt || "icon"}
-              className="ml-2 input-icon"
-            />
+            <Image src={iconSrc} height={24} width={24} alt={iconAlt || "icon"} className="ml-2 input-icon" />
           )}
           <FormControl>
             <Input
               placeholder={placeholder}
               {...field}
-              type={type || "text"} // Pass type prop to Input
-              className={`shad-input border-0 ${
-                props.disabled
-                  ? "bg-gray-200 dark:bg-gray-700 cursor-not-allowed"
-                  : ""
-              }`}
+              type={type || "text"}
+              className={`shad-input border-0 ${props.disabled ? "bg-gray-200 dark:bg-gray-700 cursor-not-allowed" : ""}`}
               disabled={props.disabled}
             />
           </FormControl>
@@ -95,12 +65,7 @@ const RenderField = ({ field, props }: { field: any; props: CustomProps }) => {
     case FormFieldType.TEXTAREA:
       return (
         <FormControl>
-          <Textarea
-            placeholder={placeholder}
-            {...field}
-            className="shad-textArea"
-            disabled={props.disabled}
-          />
+          <Textarea placeholder={placeholder} {...field} className="shad-textArea" disabled={props.disabled} />
         </FormControl>
       );
     case FormFieldType.PHONE_INPUT:
@@ -111,7 +76,7 @@ const RenderField = ({ field, props }: { field: any; props: CustomProps }) => {
             placholder={placeholder}
             international
             withCountryCallingCode
-            value={field.value as E164Number | undefined}
+            value={field.value as any}
             onChange={field.onChange}
             className="input-phone"
           />
@@ -120,13 +85,7 @@ const RenderField = ({ field, props }: { field: any; props: CustomProps }) => {
     case FormFieldType.DATE_PICKER:
       return (
         <div className="flex rounded-md border border-dark-500 bg-dark-400">
-          <Image
-            src="/assets/icons/calendar.svg"
-            height={24}
-            width={24}
-            alt="calendar"
-            className="ml-2 input-icon"
-          />
+          <Image src="/assets/icons/calendar.svg" height={24} width={24} alt="calendar" className="ml-2 input-icon" />
           <FormControl>
             <DatePicker
               selected={field.value}
@@ -142,26 +101,13 @@ const RenderField = ({ field, props }: { field: any; props: CustomProps }) => {
     case FormFieldType.SELECT:
       return (
         <FormControl>
-          <Select
-            value={field.value ? String(field.value) : undefined}
-            onValueChange={(value) => {
-              if (props.name === "consultationInterval") {
-                field.onChange(Number(value));
-              } else {
-                field.onChange(value);
-              }
-            }}
-          >
+          <Select value={field.value ? String(field.value) : undefined} onValueChange={(value) => field.onChange(value)}>
             <FormControl>
               <SelectTrigger className="shad-select-trigger">
                 <SelectValue placeholder={placeholder} />
               </SelectTrigger>
             </FormControl>
-            <SelectContent
-              className={props.selectContentClassName || "shad-select-content"}
-            >
-              {props.children}
-            </SelectContent>
+            <SelectContent className={props.selectContentClassName || "shad-select-content"}>{props.children}</SelectContent>
           </Select>
         </FormControl>
       );
@@ -171,11 +117,7 @@ const RenderField = ({ field, props }: { field: any; props: CustomProps }) => {
       return (
         <FormControl>
           <div className="flex items-center gap-4">
-            <Checkbox
-              id={props.name}
-              checked={field.value}
-              onCheckedChange={field.onChange}
-            />
+            <Checkbox id={props.name} checked={field.value} onCheckedChange={field.onChange} />
             <label htmlFor={props.name} className="checkbox-label">
               {props.label}
             </label>
@@ -195,7 +137,7 @@ const RenderField = ({ field, props }: { field: any; props: CustomProps }) => {
         />
       );
     default:
-      break;
+      return null;
   }
 };
 
@@ -208,12 +150,8 @@ const CustomFormField = (props: CustomProps) => {
       name={name}
       render={({ field }) => (
         <FormItem className="flex-1">
-          {fieldType !== FormFieldType.CHECKBOX && label && (
-            <FormLabel>{label}</FormLabel>
-          )}
-
+          {fieldType !== FormFieldType.CHECKBOX && label && <FormLabel>{label}</FormLabel>}
           <RenderField field={field} props={props} />
-          {/* Don't show FormMessage for appointment date picker since it handles its own error display */}
           {fieldType !== FormFieldType.APPOINTMENT_DATE_PICKER && (
             <FormMessage className="shad-error" />
           )}

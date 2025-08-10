@@ -86,7 +86,7 @@ const AppointmentForm = ({
           userId,
           patientId,
           practiceId,
-          schedule: new Date(values.schedule),
+          schedule: new Date((values.schedule as Date).getTime()),
           reason: values.reason!,
           note: values.note,
           status: status as Status,
@@ -102,14 +102,22 @@ const AppointmentForm = ({
         }
       } else {
         console.log("Updating Appointment");
+        const updateFields: any = { status: status as Status };
+        // Only include schedule when explicitly scheduling/rescheduling
+        if (type === "schedule" && values?.schedule) {
+          updateFields.schedule = new Date(
+            values.schedule as unknown as string | number | Date
+          );
+        }
+        // Only include cancellation reason for cancel action
+        if (type === "cancel" && values?.cancellationReason) {
+          updateFields.cancellationReason = values.cancellationReason;
+        }
+
         const appointmentToUpdate = {
           userId,
           appointmentId: appointment?.$id!,
-          appointment: {
-            schedule: new Date(values?.schedule),
-            status: status as Status,
-            cancellationReason: values?.cancellationReason,
-          },
+          appointment: updateFields,
           type,
         };
 
@@ -165,7 +173,7 @@ const AppointmentForm = ({
           </section>
         )}
 
-        {type !== "cancel" && (
+        {type === "create" || type === "schedule" ? (
           <>
             <CustomFormField
               fieldType={FormFieldType.APPOINTMENT_DATE_PICKER}
@@ -178,25 +186,27 @@ const AppointmentForm = ({
               practiceId={practiceId}
             />
 
-            <div className="flex flex-col gap-6 xl:flex-row">
-              <CustomFormField
-                fieldType={FormFieldType.TEXTAREA}
-                control={form.control}
-                name="reason"
-                label="Reason for appointment"
-                placeholder="Enter reason for appointment"
-              />
+            {type === "create" && (
+              <div className="flex flex-col gap-6 xl:flex-row">
+                <CustomFormField
+                  fieldType={FormFieldType.TEXTAREA}
+                  control={form.control}
+                  name="reason"
+                  label="Reason for appointment"
+                  placeholder="Enter reason for appointment"
+                />
 
-              <CustomFormField
-                fieldType={FormFieldType.TEXTAREA}
-                control={form.control}
-                name="note"
-                label="Notes"
-                placeholder="Enter notes"
-              />
-            </div>
+                <CustomFormField
+                  fieldType={FormFieldType.TEXTAREA}
+                  control={form.control}
+                  name="note"
+                  label="Notes"
+                  placeholder="Enter notes"
+                />
+              </div>
+            )}
           </>
-        )}
+        ) : null}
 
         {type === "cancel" && (
           <CustomFormField
@@ -206,6 +216,10 @@ const AppointmentForm = ({
             label="Reason for cancellation"
             placeholder="Enter reason for cancellation"
           />
+        )}
+
+        {(type === "complete" || type === "no-show") && (
+          <p className="text-dark-700">Confirm to {type} this appointment.</p>
         )}
 
         <SubmitButton

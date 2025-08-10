@@ -94,6 +94,14 @@ export const ScheduleAppointmentSchema = z.object({
   cancellationReason: z.string().optional(),
 });
 
+// Minimal schema for actions that don't require extra input (complete, no-show)
+export const MinimalAppointmentUpdateSchema = z.object({
+  schedule: z.coerce.date().optional(),
+  reason: z.string().optional(),
+  note: z.string().optional(),
+  cancellationReason: z.string().optional(),
+});
+
 export const CancelAppointmentSchema = z.object({
   schedule: z.coerce.date(),
   reason: z.string().optional(),
@@ -110,6 +118,9 @@ export function getAppointmentSchema(type: string) {
       return CreateAppointmentSchema;
     case "cancel":
       return CancelAppointmentSchema;
+    case "complete":
+    case "no-show":
+      return MinimalAppointmentUpdateSchema;
     default:
       return ScheduleAppointmentSchema;
   }

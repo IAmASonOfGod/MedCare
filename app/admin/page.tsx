@@ -1,4 +1,5 @@
 "use client";
+
 import React, { useEffect, useState } from "react";
 import { usePractice } from "@/components/PracticeContext";
 import {
@@ -8,14 +9,11 @@ import {
   getUpcomingAppointments,
 } from "@/lib/actions/appointment.action";
 import StatCard from "@/components/StatCard";
-import Image from "next/image";
 import Link from "next/link";
 import { columns } from "@/components/table/columns";
 import { DataTable } from "@/components/table/DataTable";
-import ThemeToggle from "@/components/ThemeToggle";
 import AppointmentAnalytics from "@/components/AppointmentAnalytics";
 import CollapsibleSection from "@/components/CollapsibleSection";
-import { fetchPracticeByAdminEmail } from "@/lib/actions/practice.actions";
 import PracticeSettingsModal from "@/components/PracticeSettingsModal";
 import {
   DropdownMenu,
@@ -24,6 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
 
 const Admin = () => {
   const [appointments, setAppointments] = useState<any>(null);
@@ -43,17 +42,23 @@ const Admin = () => {
   });
   const [isPracticeSettingsOpen, setIsPracticeSettingsOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [appointmentsError, setAppointmentsError] = useState<string | null>(
+    null
+  );
   const { practice } = usePractice();
-  console.log("Practice Name in Admin Page:", practice?.practiceName);
+  const router = useRouter();
 
-  const fetchAppointments = async (page: number = 1) => {
+  const fetchAppointments = async (
+    page: number = 1,
+    mode: "all" | "today" | "upcoming" = viewMode
+  ) => {
     if (!practice?.$id) return;
 
     setIsLoading(true);
+    setAppointmentsError(null);
     try {
       let data;
-
-      switch (viewMode) {
+      switch (mode) {
         case "today":
           data = await getTodaysAppointments(practice.$id);
           break;
@@ -63,11 +68,16 @@ const Admin = () => {
         default:
           data = await getRecentAppointmentList(practice.$id, page, 20);
       }
-
       setAppointments(data);
       setCurrentPage(page);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching appointments:", error);
+      const message =
+        typeof error?.message === "string" &&
+        (error.message.includes("network") || error.message.includes("fetch"))
+          ? "Network error. Please check your connection and try again."
+          : "Unable to load appointments. Please try again.";
+      setAppointmentsError(message);
     } finally {
       setIsLoading(false);
     }
@@ -75,7 +85,6 @@ const Admin = () => {
 
   const fetchCounts = async () => {
     if (!practice?.$id) return;
-
     try {
       const counts = await getAppointmentCounts(practice.$id);
       setAppointmentCounts(counts);
@@ -86,99 +95,130 @@ const Admin = () => {
 
   useEffect(() => {
     if (practice?.$id) {
-      fetchAppointments(1);
+      fetchAppointments(1, viewMode);
       fetchCounts();
       localStorage.setItem("adminReady", "true");
     }
   }, [practice?.$id]);
 
-  // Auto-refresh appointments every 30 seconds (without loading state)
+  // Auto-refresh every 30s, respecting current mode/page
   useEffect(() => {
     if (!practice?.$id) return;
-
     const interval = setInterval(async () => {
-      console.log("Auto-refreshing appointments...");
-      // Auto-refresh without showing loading spinner
       try {
-        const result = await getRecentAppointmentList(
-          practice.$id,
-          currentPage,
-          20
-        );
-        if (result) {
-          setAppointments(JSON.parse(result));
+        let result;
+        switch (viewMode) {
+          case "today":
+            result = await getTodaysAppointments(practice.$id);
+            break;
+          case "upcoming":
+            result = await getUpcomingAppointments(
+              practice.$id,
+              currentPage,
+              20
+            );
+            break;
+          default:
+            result = await getRecentAppointmentList(
+              practice.$id,
+              currentPage,
+              20
+            );
         }
+        if (result) setAppointments(result);
       } catch (error) {
         console.error("Auto-refresh appointments error:", error);
       }
-
       try {
         const counts = await getAppointmentCounts(practice.$id);
-        if (counts) {
-          setAppointmentCounts(counts);
-        }
+        if (counts) setAppointmentCounts(counts);
       } catch (error) {
         console.error("Auto-refresh counts error:", error);
       }
-    }, 30000); // Refresh every 30 seconds
-
+    }, 30000);
     return () => clearInterval(interval);
-  }, [practice?.$id, currentPage]);
+  }, [practice?.$id, currentPage, viewMode]);
 
-  // Handle page change
-  const handlePageChange = (newPage: number) => {
-    if (newPage !== currentPage) {
-      fetchAppointments(newPage);
+  // Event-driven refresh when appointments are updated elsewhere
+  useEffect(() => {
+    function handleUpdated() {
+      if (!practice?.$id) return;
+      fetchAppointments(currentPage, viewMode);
+      fetchCounts();
     }
+    if (typeof window !== "undefined") {
+      window.addEventListener("appointments:updated", handleUpdated);
+    }
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("appointments:updated", handleUpdated);
+      }
+    };
+  }, [practice?.$id, currentPage, viewMode]);
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage !== currentPage) fetchAppointments(newPage, viewMode);
   };
 
-  // Handle status filter
   const handleStatusFilter = (status: string) => {
     setStatusFilter(status === statusFilter ? "" : status);
-    setViewMode("all"); // Reset view mode when filtering by status
+    setViewMode("all");
   };
 
-  // Toggle collapsible sections
   const toggleSection = (section: "analytics" | "appointments") => {
-    setCollapsedSections((prev) => ({
-      ...prev,
-      [section]: !prev[section],
-    }));
+    setCollapsedSections((prev) => ({ ...prev, [section]: !prev[section] }));
   };
 
-  // Filter appointments by status if statusFilter is set
+  // Combined filtering + recomputed pagination
   const getFilteredAppointments = () => {
-    if (!appointments || !statusFilter) {
-      return appointments;
+    if (!appointments) return appointments;
+
+    const limit = appointments.pagination?.limit || 20;
+    const page = appointments.pagination?.page || currentPage;
+
+    let docs = appointments.documents as any[];
+
+    if (statusFilter)
+      docs = docs.filter((apt: any) => apt.status === statusFilter);
+
+    const term = searchTerm.trim().toLowerCase();
+    if (term) {
+      docs = docs.filter((apt: any) => {
+        const patient = apt.patient || {};
+        const fields = [
+          apt.reason,
+          String(patient.name || ""),
+          String(patient.email || ""),
+          String(patient.phone || ""),
+        ];
+        return fields.some((f) =>
+          String(f || "")
+            .toLowerCase()
+            .includes(term)
+        );
+      });
     }
 
-    const filteredData = {
+    const total = docs.length;
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+    const clampedPage = Math.min(page, totalPages);
+    const startIndex = (clampedPage - 1) * limit;
+    const endIndex = Math.min(startIndex + limit, total);
+
+    const pageDocs = docs.slice(startIndex, endIndex);
+
+    return {
       ...appointments,
-      documents: appointments.documents.filter(
-        (apt: any) => apt.status === statusFilter
-      ),
+      documents: pageDocs,
       pagination: {
-        ...appointments.pagination,
-        total: appointments.documents.filter(
-          (apt: any) => apt.status === statusFilter
-        ).length,
+        page: clampedPage,
+        limit,
+        total,
+        totalPages,
+        hasNextPage: clampedPage < totalPages,
+        hasPreviousPage: clampedPage > 1,
       },
     };
-
-    return filteredData;
-  };
-
-  // Provide default values if appointments is null
-  const appointmentData = appointments || {
-    documents: [],
-    pagination: {
-      page: 1,
-      limit: 20,
-      total: 0,
-      totalPages: 0,
-      hasNextPage: false,
-      hasPreviousPage: false,
-    },
   };
 
   return (
@@ -194,7 +234,7 @@ const Admin = () => {
       <main className="admin-main">
         <section className="w-full space-y-4">
           <div className="flex justify-between items-center">
-          <h1 className="header">Welcome 👋 </h1>
+            <h1 className="header">Welcome 👋 </h1>
             <DropdownMenu
               open={isDropdownOpen}
               onOpenChange={setIsDropdownOpen}
@@ -254,8 +294,8 @@ const Admin = () => {
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => {
-                    console.log("Payment clicked");
                     setIsDropdownOpen(false);
+                    router.push("/admin/payment");
                   }}
                   className="text-white hover:bg-dark-500 focus:bg-dark-500 cursor-pointer"
                 >
@@ -276,10 +316,11 @@ const Admin = () => {
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => {
-                    // TODO: Implement logout functionality
-                    console.log("Logout clicked");
+                    try {
+                      localStorage.removeItem("adminReady");
+                    } catch {}
                     setIsDropdownOpen(false);
-                    // You can add logout logic here, e.g., redirect to login page
+                    router.push("/admin-login");
                   }}
                   className="text-white hover:bg-dark-500 focus:bg-dark-500 cursor-pointer"
                 >
@@ -301,10 +342,11 @@ const Admin = () => {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-          <p className="text-dark-700">
+          <p className="text-dark-300">
             Start the day with managing new appointments
           </p>
         </section>
+
         <section className="admin-stat">
           <div
             onClick={() => handleStatusFilter("scheduled")}
@@ -314,12 +356,12 @@ const Admin = () => {
                 : ""
             }`}
           >
-          <StatCard
-            type="appointments"
-            count={appointmentCounts.scheduledCount}
-            label="Scheduled appointments"
-            icon="/assets/icons/appointments.svg"
-          />
+            <StatCard
+              type="appointments"
+              count={appointmentCounts.scheduledCount}
+              label="Scheduled appointments"
+              icon="/assets/icons/appointments.svg"
+            />
           </div>
           <div
             onClick={() => handleStatusFilter("pending")}
@@ -329,12 +371,12 @@ const Admin = () => {
                 : ""
             }`}
           >
-          <StatCard
-            type="pending"
-            count={appointmentCounts.pendingCount}
-            label="Pending appointments"
-            icon="/assets/icons/pending.svg"
-          />
+            <StatCard
+              type="pending"
+              count={appointmentCounts.pendingCount}
+              label="Pending appointments"
+              icon="/assets/icons/pending.svg"
+            />
           </div>
           <div
             onClick={() => handleStatusFilter("cancelled")}
@@ -344,16 +386,15 @@ const Admin = () => {
                 : ""
             }`}
           >
-          <StatCard
-            type="cancelled"
-            count={appointmentCounts.cancelledCount}
-            label="Cancelled appointments"
-            icon="/assets/icons/cancelled.svg"
-          />
+            <StatCard
+              type="cancelled"
+              count={appointmentCounts.cancelledCount}
+              label="Cancelled appointments"
+              icon="/assets/icons/cancelled.svg"
+            />
           </div>
         </section>
 
-        {/* Analytics Dashboard */}
         {practice?.$id && (
           <CollapsibleSection
             title="Analytics Dashboard"
@@ -364,67 +405,70 @@ const Admin = () => {
           </CollapsibleSection>
         )}
 
-        {/* Appointments Section */}
         <CollapsibleSection
           title="Appointments"
           isCollapsed={collapsedSections.appointments}
           onToggle={() => toggleSection("appointments")}
         >
-          {/* Filtering and Controls */}
-          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 my-6 p-4 bg-gray-50 dark:bg-dark-400 rounded-lg">
-            {/* View Mode Filters */}
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => {
-                  setViewMode("all");
-                  fetchAppointments(1);
-                }}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  viewMode === "all"
-                    ? "bg-gray-600 dark:bg-dark-500 text-white"
-                    : "bg-white dark:bg-dark-300 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-dark-400"
-                }`}
-              >
-                All Appointments
-              </button>
-              <button
-                onClick={() => {
-                  setViewMode("today");
-                  fetchAppointments(1);
-                }}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  viewMode === "today"
-                    ? "bg-gray-600 dark:bg-dark-500 text-white"
-                    : "bg-white dark:bg-dark-300 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-dark-400"
-                }`}
-              >
-                Today
-              </button>
-              <button
-                onClick={() => {
-                  setViewMode("upcoming");
-                  fetchAppointments(1);
-                }}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  viewMode === "upcoming"
-                    ? "bg-gray-600 dark:bg-dark-500 text-white"
-                    : "bg-white dark:bg-dark-300 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-dark-400"
-                }`}
-              >
-                Upcoming (7 days)
-              </button>
-            </div>
-
-            {/* Search and Actions */}
-            <div className="flex gap-2">
+          {/* Filters bar */}
+          <div className="flex flex-wrap items-center justify-between gap-3 my-6 p-4 bg-dark-400 rounded-lg">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => {
+                    setViewMode("all");
+                    setStatusFilter("");
+                    setSearchTerm("");
+                    fetchAppointments(1, "all");
+                  }}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    viewMode === "all"
+                      ? "bg-dark-500 text-white"
+                      : "bg-dark-300 text-gray-200 hover:bg-dark-400"
+                  }`}
+                >
+                  All Appointments
+                </button>
+                <button
+                  onClick={() => {
+                    setViewMode("today");
+                    setStatusFilter("");
+                    setSearchTerm("");
+                    fetchAppointments(1, "today");
+                  }}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    viewMode === "today"
+                      ? "bg-dark-500 text-white"
+                      : "bg-dark-300 text-gray-200 hover:bg-dark-400"
+                  }`}
+                >
+                  Today
+                </button>
+                <button
+                  onClick={() => {
+                    setViewMode("upcoming");
+                    setStatusFilter("");
+                    setSearchTerm("");
+                    fetchAppointments(1, "upcoming");
+                  }}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    viewMode === "upcoming"
+                      ? "bg-dark-500 text-white"
+                      : "bg-dark-300 text-gray-200 hover:bg-dark-400"
+                  }`}
+                >
+                  Upcoming (7 days)
+                </button>
+              </div>
               {statusFilter && (
-                <div className="flex items-center gap-2 px-3 py-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-                  <span className="text-sm text-blue-700 dark:text-blue-300">
+                <div className="flex items-center gap-2 px-3 py-2 bg-blue-900/40 rounded-lg">
+                  <span className="text-sm text-blue-300">
                     Filtered by: {statusFilter}
                   </span>
                   <button
                     onClick={() => handleStatusFilter("")}
-                    className="text-blue-600 dark:text-blue-400 hover:text-blue-800"
+                    className="text-blue-300 hover:text-blue-200"
+                    aria-label="Clear status filter"
                   >
                     <svg
                       className="w-4 h-4"
@@ -447,68 +491,81 @@ const Admin = () => {
                 placeholder="Search patients..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="px-3 py-2 border border-gray-300 dark:border-dark-500 rounded-lg bg-white dark:bg-dark-300 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                className="px-3 py-2 border border-dark-500 rounded-lg bg-dark-300 text-gray-200 focus:outline-none focus:ring-2 focus:ring-dark-500 w-56"
               />
-          <button
-            onClick={async () => {
-              if (practice?.$id) {
-                console.log("Manual refresh triggered...");
-                setIsLoading(true);
-                try {
-                  await fetchAppointments(currentPage);
-                  await fetchCounts();
-                } finally {
-                  setIsLoading(false);
-                }
-              }
-            }}
-            disabled={isLoading}
-                className="flex items-center gap-2 rounded-full px-4 py-2 text-base font-semibold shadow-md bg-gray-600 dark:bg-dark-400 text-white hover:bg-gray-700 dark:hover:bg-dark-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Refresh appointments data"
-          >
-            {isLoading ? (
-              <svg
-                className="h-5 w-5 animate-spin"
-                fill="none"
-                viewBox="0 0 24 24"
+            </div>
+            <div className="flex items-center ml-auto">
+              <button
+                onClick={async () => {
+                  if (practice?.$id) {
+                    setIsLoading(true);
+                    try {
+                      await fetchAppointments(currentPage, viewMode);
+                      await fetchCounts();
+                    } finally {
+                      setIsLoading(false);
+                    }
+                  }
+                }}
+                disabled={isLoading}
+                className="flex items-center gap-2 rounded-full px-4 py-2 text-base font-semibold shadow-md bg-dark-400 text-white hover:bg-dark-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Refresh appointments data"
               >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                />
-              </svg>
-            ) : (
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                />
-              </svg>
-            )}
-            {isLoading ? "Refreshing..." : "Refresh"}
-          </button>
-          <ThemeToggle />
-        </div>
+                {isLoading ? (
+                  <svg
+                    className="h-5 w-5 animate-spin"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    />
+                  </svg>
+                ) : (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                    />
+                  </svg>
+                )}
+                {isLoading ? "Refreshing..." : "Refresh"}
+              </button>
+            </div>
           </div>
 
-          {isLoading ? (
+          {appointmentsError ? (
+            <div className="bg-red-900/20 border border-red-800 rounded-lg p-4">
+              <h3 className="text-red-200 font-semibold mb-2">
+                Error Loading Appointments
+              </h3>
+              <p className="text-red-300 text-sm">{appointmentsError}</p>
+              <button
+                onClick={() => fetchAppointments(currentPage, viewMode)}
+                className="mt-3 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+              >
+                Retry
+              </button>
+            </div>
+          ) : isLoading ? (
             <div className="flex justify-center items-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
             </div>
@@ -519,96 +576,119 @@ const Admin = () => {
             />
           )}
 
-        {/* Pagination Info */}
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6 p-4 bg-gray-50 dark:bg-dark-400 rounded-lg">
+          {/* Pagination Info */}
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6 p-4 bg-dark-400 rounded-lg">
             <div className="flex items-center gap-4">
-          <div className="text-sm text-gray-600 dark:text-gray-300">
-            Showing{" "}
+              <div className="text-sm text-gray-300">
+                Showing{" "}
                 <span className="font-semibold">
-                  {(currentPage - 1) * 20 + 1}
+                  {((getFilteredAppointments()?.pagination?.page || 1) - 1) *
+                    (getFilteredAppointments()?.pagination?.limit || 20) +
+                    1}
                 </span>{" "}
-            to{" "}
-            <span className="font-semibold">
-              {Math.min(
-                currentPage * 20,
+                to{" "}
+                <span className="font-semibold">
+                  {Math.min(
+                    (getFilteredAppointments()?.pagination?.page || 1) *
+                      (getFilteredAppointments()?.pagination?.limit || 20),
                     getFilteredAppointments()?.pagination?.total || 0
-              )}
-            </span>{" "}
-            of{" "}
-            <span className="font-semibold">
+                  )}
+                </span>{" "}
+                of{" "}
+                <span className="font-semibold">
                   {getFilteredAppointments()?.pagination?.total || 0}
-            </span>{" "}
-            appointments
+                </span>{" "}
+                appointments
                 {statusFilter && (
-                  <span className="ml-2 text-blue-600 dark:text-blue-400">
+                  <span className="ml-2 text-blue-300">
                     (filtered by {statusFilter})
                   </span>
                 )}
+                {searchTerm && (
+                  <span className="ml-2 text-blue-300">
+                    (search: "{searchTerm}")
+                  </span>
+                )}
               </div>
-              {statusFilter && (
+              {(statusFilter || searchTerm) && (
                 <button
-                  onClick={() => handleStatusFilter("")}
-                  className="px-3 py-1 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline"
+                  onClick={() => {
+                    setStatusFilter("");
+                    setSearchTerm("");
+                  }}
+                  className="px-3 py-1 text-sm text-blue-300 hover:text-blue-200 underline"
                 >
                   Clear filter
                 </button>
               )}
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={
-                !appointmentData.pagination?.hasPreviousPage || isLoading
-              }
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:border-gray-300 transition-all duration-200 shadow-sm"
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
-              Previous
-            </button>
-
-              <div className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-gray-600 dark:bg-dark-400 rounded-lg shadow-sm">
-              <span className="text-gray-300">Page</span>
-              <span className="font-semibold">{currentPage}</span>
-              <span className="text-gray-300">of</span>
-              <span className="font-semibold">
-                {appointmentData.pagination?.totalPages || 1}
-              </span>
             </div>
-
-            <button
-              onClick={() => handlePageChange(currentPage + 1)}
-              disabled={!appointmentData.pagination?.hasNextPage || isLoading}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:border-gray-300 transition-all duration-200 shadow-sm"
-            >
-              Next
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() =>
+                  handlePageChange(
+                    (getFilteredAppointments()?.pagination?.page || 1) - 1
+                  )
+                }
+                disabled={
+                  !getFilteredAppointments()?.pagination?.hasPreviousPage ||
+                  isLoading
+                }
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-200 bg-dark-300 border border-dark-500 rounded-lg hover:bg-dark-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
-            </button>
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
+                </svg>
+                Previous
+              </button>
+              <div className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-dark-400 rounded-lg shadow-sm">
+                <span className="text-gray-300">Page</span>
+                <span className="font-semibold">
+                  {getFilteredAppointments()?.pagination?.page || 1}
+                </span>
+                <span className="text-gray-300">of</span>
+                <span className="font-semibold">
+                  {getFilteredAppointments()?.pagination?.totalPages || 1}
+                </span>
+              </div>
+              <button
+                onClick={() =>
+                  handlePageChange(
+                    (getFilteredAppointments()?.pagination?.page || 1) + 1
+                  )
+                }
+                disabled={
+                  !getFilteredAppointments()?.pagination?.hasNextPage ||
+                  isLoading
+                }
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-200 bg-dark-300 border border-dark-500 rounded-lg hover:bg-dark-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm"
+              >
+                Next
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </button>
+            </div>
           </div>
-        </div>
         </CollapsibleSection>
       </main>
 
