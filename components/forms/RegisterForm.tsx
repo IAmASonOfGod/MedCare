@@ -170,8 +170,8 @@ const RegisterForm = ({ practiceId }: { practiceId: string }) => {
               <FormControl>
                 <RadioGroup
                   className="flex h-11 gap-6 xl:justify-between"
+                  value={field.value}
                   onValueChange={field.onChange}
-                  defaultValue={field.value}
                 >
                   {GenderOptions.map((option) => (
                     <div key={option} className="radio-group">

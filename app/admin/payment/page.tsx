@@ -4,7 +4,9 @@ import React, { useState } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import {
   Elements,
-  CardElement,
+  CardNumberElement,
+  CardExpiryElement,
+  CardCvcElement,
   useElements,
   useStripe,
 } from "@stripe/react-stripe-js";
@@ -15,7 +17,6 @@ const stripePromise = loadStripe(stripePublicKey);
 function CheckoutForm() {
   const stripe = useStripe();
   const elements = useElements();
-  const [amount, setAmount] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -25,18 +26,14 @@ function CheckoutForm() {
 
     if (!stripe || !elements) return;
 
-    const amt = Math.round(Number(amount) * 100);
-    if (!Number.isFinite(amt) || amt <= 0) {
-      setMessage("Enter a valid amount");
-      return;
-    }
+    const amt = 80000; // 800 ZAR fixed
 
     setIsLoading(true);
     try {
       const res = await fetch("/api/payments/create-intent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: amt, currency: "usd" }),
+        body: JSON.stringify({}),
       });
       const data = await res.json();
       if (!res.ok || !data?.clientSecret) {
@@ -45,7 +42,7 @@ function CheckoutForm() {
 
       const result = await stripe.confirmCardPayment(data.clientSecret, {
         payment_method: {
-          card: elements.getElement(CardElement)!,
+          card: elements.getElement(CardNumberElement)!,
         },
       });
 
@@ -68,25 +65,71 @@ function CheckoutForm() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="max-w-md space-y-4 bg-dark-400 p-4 rounded-lg"
+      className="w-full max-w-lg space-y-6 bg-dark-400 p-6 rounded-xl"
     >
-      <h1 className="text-xl font-semibold text-white">Payments</h1>
-      <input
-        type="number"
-        step="0.01"
-        min="0"
-        value={amount}
-        onChange={(e) => setAmount(e.target.value)}
-        placeholder="Amount (e.g., 49.99)"
-        className="w-full px-3 py-2 rounded bg-dark-300 text-gray-200 border border-dark-500 focus:outline-none focus:ring-2 focus:ring-dark-500"
-      />
-      <div className="p-3 rounded bg-dark-300 border border-dark-500 text-gray-200">
-        <CardElement options={{ hidePostalCode: true }} />
+      <h1 className="text-2xl font-semibold text-white">Payments</h1>
+      <div className="w-full px-3 py-2 rounded bg-dark-300 text-white border border-dark-500">
+        Subscription: R800.00 (ZAR)
+      </div>
+      <div className="space-y-4 p-4 rounded bg-dark-300 border border-dark-500 text-gray-200">
+        <label className="block text-base mb-2 text-white">Card number</label>
+        <div className="rounded bg-dark-400 p-4">
+          <CardNumberElement
+            options={{
+              showIcon: true,
+              style: {
+                base: {
+                  color: "#ffffff",
+                  fontSize: "18px",
+                  "::placeholder": { color: "#94a3b8" },
+                  iconColor: "#94a3b8",
+                },
+                invalid: { color: "#ef4444" },
+              },
+            }}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-base mb-2 text-white">Expiry</label>
+            <div className="rounded bg-dark-400 p-4">
+              <CardExpiryElement
+                options={{
+                  style: {
+                    base: {
+                      color: "#ffffff",
+                      fontSize: "18px",
+                      "::placeholder": { color: "#94a3b8" },
+                    },
+                    invalid: { color: "#ef4444" },
+                  },
+                }}
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-base mb-2 text-white">CVC</label>
+            <div className="rounded bg-dark-400 p-4">
+              <CardCvcElement
+                options={{
+                  style: {
+                    base: {
+                      color: "#ffffff",
+                      fontSize: "18px",
+                      "::placeholder": { color: "#94a3b8" },
+                    },
+                    invalid: { color: "#ef4444" },
+                  },
+                }}
+              />
+            </div>
+          </div>
+        </div>
       </div>
       <button
         type="submit"
         disabled={isLoading || !stripe || !elements}
-        className="w-full rounded px-4 py-2 bg-dark-500 text-white hover:bg-dark-600 disabled:opacity-50"
+        className="w-full rounded-lg px-6 py-3 text-lg bg-dark-500 text-white hover:bg-dark-600 disabled:opacity-50"
       >
         {isLoading ? "Processing..." : "Pay"}
       </button>

@@ -42,21 +42,46 @@ interface CustomProps {
 }
 
 const RenderField = ({ field, props }: { field: any; props: CustomProps }) => {
-  const { fieldType, iconAlt, iconSrc, placeholder, showTimeSelect, dateFormat, renderSkeleton, type } = props;
+  const {
+    fieldType,
+    iconAlt,
+    iconSrc,
+    placeholder,
+    showTimeSelect,
+    dateFormat,
+    renderSkeleton,
+    type,
+  } = props;
 
   switch (fieldType) {
     case FormFieldType.INPUT:
       return (
-        <div className={`flex rounded-md border border-dark-500 bg-dark-400 ${props.disabled ? "bg-gray-200 dark:bg-gray-700 cursor-not-allowed" : ""}`}>
+        <div
+          className={`flex rounded-md border border-dark-500 bg-dark-400 ${
+            props.disabled
+              ? "bg-gray-200 dark:bg-gray-700 cursor-not-allowed"
+              : ""
+          }`}
+        >
           {iconSrc && (
-            <Image src={iconSrc} height={24} width={24} alt={iconAlt || "icon"} className="ml-2 input-icon" />
+            <Image
+              src={iconSrc}
+              height={24}
+              width={24}
+              alt={iconAlt || "icon"}
+              className="ml-2 input-icon"
+            />
           )}
           <FormControl>
             <Input
               placeholder={placeholder}
               {...field}
               type={type || "text"}
-              className={`shad-input border-0 ${props.disabled ? "bg-gray-200 dark:bg-gray-700 cursor-not-allowed" : ""}`}
+              className={`shad-input border-0 ${
+                props.disabled
+                  ? "bg-gray-200 dark:bg-gray-700 cursor-not-allowed"
+                  : ""
+              }`}
               disabled={props.disabled}
             />
           </FormControl>
@@ -65,7 +90,12 @@ const RenderField = ({ field, props }: { field: any; props: CustomProps }) => {
     case FormFieldType.TEXTAREA:
       return (
         <FormControl>
-          <Textarea placeholder={placeholder} {...field} className="shad-textArea" disabled={props.disabled} />
+          <Textarea
+            placeholder={placeholder}
+            {...field}
+            className="shad-textArea"
+            disabled={props.disabled}
+          />
         </FormControl>
       );
     case FormFieldType.PHONE_INPUT:
@@ -85,7 +115,13 @@ const RenderField = ({ field, props }: { field: any; props: CustomProps }) => {
     case FormFieldType.DATE_PICKER:
       return (
         <div className="flex rounded-md border border-dark-500 bg-dark-400">
-          <Image src="/assets/icons/calendar.svg" height={24} width={24} alt="calendar" className="ml-2 input-icon" />
+          <Image
+            src="/assets/icons/calendar.svg"
+            height={24}
+            width={24}
+            alt="calendar"
+            className="ml-2 input-icon"
+          />
           <FormControl>
             <DatePicker
               selected={field.value}
@@ -101,13 +137,23 @@ const RenderField = ({ field, props }: { field: any; props: CustomProps }) => {
     case FormFieldType.SELECT:
       return (
         <FormControl>
-          <Select value={field.value ? String(field.value) : undefined} onValueChange={(value) => field.onChange(value)}>
+          <Select
+            value={field.value != null ? String(field.value) : ""}
+            onValueChange={(value) => field.onChange(value)}
+          >
             <FormControl>
-              <SelectTrigger className="shad-select-trigger">
+              <SelectTrigger
+                className="shad-select-trigger"
+                disabled={props.disabled}
+              >
                 <SelectValue placeholder={placeholder} />
               </SelectTrigger>
             </FormControl>
-            <SelectContent className={props.selectContentClassName || "shad-select-content"}>{props.children}</SelectContent>
+            <SelectContent
+              className={props.selectContentClassName || "shad-select-content"}
+            >
+              {props.children}
+            </SelectContent>
           </Select>
         </FormControl>
       );
@@ -117,7 +163,11 @@ const RenderField = ({ field, props }: { field: any; props: CustomProps }) => {
       return (
         <FormControl>
           <div className="flex items-center gap-4">
-            <Checkbox id={props.name} checked={field.value} onCheckedChange={field.onChange} />
+            <Checkbox
+              id={props.name}
+              checked={field.value}
+              onCheckedChange={field.onChange}
+            />
             <label htmlFor={props.name} className="checkbox-label">
               {props.label}
             </label>
@@ -150,7 +200,9 @@ const CustomFormField = (props: CustomProps) => {
       name={name}
       render={({ field }) => (
         <FormItem className="flex-1">
-          {fieldType !== FormFieldType.CHECKBOX && label && <FormLabel>{label}</FormLabel>}
+          {fieldType !== FormFieldType.CHECKBOX && label && (
+            <FormLabel>{label}</FormLabel>
+          )}
           <RenderField field={field} props={props} />
           {fieldType !== FormFieldType.APPOINTMENT_DATE_PICKER && (
             <FormMessage className="shad-error" />
