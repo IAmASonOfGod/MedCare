@@ -75,7 +75,8 @@ const PracticeSettingsModal: React.FC<PracticeSettingsModalProps> = ({
   onOpenChange,
   practiceId,
 }) => {
-  const [isLoading, setIsLoading] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   const form = useForm<z.infer<typeof PracticeSettingsSchema>>({
@@ -123,7 +124,7 @@ const PracticeSettingsModal: React.FC<PracticeSettingsModalProps> = ({
     if (!open || !practiceId) return;
     (async () => {
       try {
-        setIsLoading(true);
+        setIsInitializing(true);
         const settings = await getPracticeSettings(practiceId);
         if (settings) {
           form.reset({
@@ -173,7 +174,7 @@ const PracticeSettingsModal: React.FC<PracticeSettingsModalProps> = ({
       } catch (e) {
         console.error("Error loading practice settings:", e);
       } finally {
-        setIsLoading(false);
+        setIsInitializing(false);
       }
     })();
   }, [open, practiceId]);
@@ -190,7 +191,7 @@ const PracticeSettingsModal: React.FC<PracticeSettingsModalProps> = ({
 
   const onSubmit = async (data: z.infer<typeof PracticeSettingsSchema>) => {
     try {
-      setIsLoading(true);
+      setIsSaving(true);
       const payload: Partial<PracticeSettings> = {
         consultationInterval: Number(data.consultationInterval),
         mondayOpen: data.mondayClosed ? undefined : data.mondayOpen,
@@ -234,7 +235,7 @@ const PracticeSettingsModal: React.FC<PracticeSettingsModalProps> = ({
     } catch (e) {
       console.error("Error saving practice settings:", e);
     } finally {
-      setIsLoading(false);
+      setIsSaving(false);
     }
   };
 
@@ -338,17 +339,21 @@ const PracticeSettingsModal: React.FC<PracticeSettingsModalProps> = ({
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
-                disabled={isLoading}
+                disabled={isInitializing || isSaving}
                 className="border border-gray-700 text-white"
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
-                disabled={isLoading}
+                disabled={isInitializing || isSaving}
                 className="bg-dark-400 hover:bg-dark-500 text-white border border-gray-700"
               >
-                {isLoading ? "Saving..." : "Save Settings"}
+                {isSaving
+                  ? "Saving..."
+                  : isInitializing
+                  ? "Loading settings..."
+                  : "Save Settings"}
               </Button>
             </div>
           </form>

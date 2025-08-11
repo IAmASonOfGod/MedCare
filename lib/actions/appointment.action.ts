@@ -331,7 +331,38 @@ export const getTodaysAppointments = async (practiceId: string) => {
       queries
     );
 
-    return parseStringify(appointments);
+    // Enrich with patient details like getRecentAppointmentList
+    const patientIds = appointments.documents.map(
+      (appointment: any) => appointment.patientId
+    );
+    const uniquePatientIds = [...new Set(patientIds)];
+
+    let patientsMap = new Map();
+    if (uniquePatientIds.length > 0) {
+      const patients = await databases.listDocuments(
+        DATABASE_ID!,
+        PATIENT_COLLECTION_ID!,
+        [Query.equal("$id", uniquePatientIds)]
+      );
+
+      patients.documents.forEach((patient: any) => {
+        patientsMap.set(patient.$id, patient);
+      });
+    }
+
+    const appointmentsWithPatients = appointments.documents.map(
+      (appointment: any) => ({
+        ...appointment,
+        patient: patientsMap.get(appointment.patientId) || null,
+      })
+    );
+
+    const enriched = {
+      ...appointments,
+      documents: appointmentsWithPatients,
+    } as any;
+
+    return parseStringify(enriched);
   } catch (error) {
     console.log(error);
     throw error;
@@ -363,7 +394,38 @@ export const getUpcomingAppointments = async (
       queries
     );
 
-    return parseStringify(appointments);
+    // Enrich with patient details like getRecentAppointmentList
+    const patientIds = appointments.documents.map(
+      (appointment: any) => appointment.patientId
+    );
+    const uniquePatientIds = [...new Set(patientIds)];
+
+    let patientsMap = new Map();
+    if (uniquePatientIds.length > 0) {
+      const patients = await databases.listDocuments(
+        DATABASE_ID!,
+        PATIENT_COLLECTION_ID!,
+        [Query.equal("$id", uniquePatientIds)]
+      );
+
+      patients.documents.forEach((patient: any) => {
+        patientsMap.set(patient.$id, patient);
+      });
+    }
+
+    const appointmentsWithPatients = appointments.documents.map(
+      (appointment: any) => ({
+        ...appointment,
+        patient: patientsMap.get(appointment.patientId) || null,
+      })
+    );
+
+    const enriched = {
+      ...appointments,
+      documents: appointmentsWithPatients,
+    } as any;
+
+    return parseStringify(enriched);
   } catch (error) {
     console.log(error);
     throw error;

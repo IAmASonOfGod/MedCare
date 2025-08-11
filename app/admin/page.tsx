@@ -342,7 +342,7 @@ const Admin = () => {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-          <p className="text-dark-300">
+          <p className="text-white">
             Start the day with managing new appointments
           </p>
         </section>

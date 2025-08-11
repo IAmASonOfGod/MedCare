@@ -123,6 +123,8 @@ const NewAppointment = ({
         width={1000}
         alt="appointment"
         className="side-img max-w-[390px] bg-bottom"
+        style={{ width: "auto", height: "auto" }}
+        priority
       />
     </div>
   );

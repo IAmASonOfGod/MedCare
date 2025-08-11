@@ -314,6 +314,13 @@
   color: #abb8c4 !important;
 }
 
+/* Disabled days visible in dark theme */
+.react-datepicker__day--disabled {
+  color: #6b7280 !important;
+  opacity: 0.6;
+  cursor: not-allowed !important;
+}
+
 .react-datepicker__current-month,
 .react-datepicker__day-name,
 .react-datepicker-time__header {
@@ -506,13 +513,58 @@ body.theme-dark {
 }
 .theme-light .shad-select-content,
 .theme-light .shad-select-trigger {
-  background: #fff !important;
-  color: #1e293b !important;
+  background: #1a1d21 !important;
+  color: #ffffff !important;
 }
 .theme-light .shad-input,
 .theme-light .shad-textArea {
-  background: #f1f5f9 !important;
-  color: #1e293b !important;
+  background: #1a1d21 !important;
+  color: #ffffff !important;
+}
+
+/* Ensure dark input on any interaction (type, paste, autofill) */
+input.shad-input,
+textarea.shad-textArea,
+.shad-select-trigger {
+  background: #1a1d21 !important;
+  color: #ffffff !important;
+}
+input.shad-input:focus,
+textarea.shad-textArea:focus,
+.shad-select-trigger:focus {
+  background: #1a1d21 !important;
+  color: #ffffff !important;
+}
+input.shad-input:active,
+textarea.shad-textArea:active,
+.shad-select-trigger:active {
+  background: #1a1d21 !important;
+  color: #ffffff !important;
+}
+
+/* Chrome/Safari autofill */
+input.shad-input:-webkit-autofill,
+input.shad-input:-webkit-autofill:hover,
+input.shad-input:-webkit-autofill:focus,
+textarea.shad-textArea:-webkit-autofill,
+textarea.shad-textArea:-webkit-autofill:hover,
+textarea.shad-textArea:-webkit-autofill:focus,
+select.shad-select-trigger:-webkit-autofill,
+select.shad-select-trigger:-webkit-autofill:hover,
+select.shad-select-trigger:-webkit-autofill:focus {
+  -webkit-text-fill-color: #ffffff !important;
+  -webkit-box-shadow: 0 0 0px 1000px #1a1d21 inset !important;
+  box-shadow: 0 0 0px 1000px #1a1d21 inset !important;
+  caret-color: #ffffff !important;
+  transition: background-color 999999s ease-in-out 0s !important;
+}
+
+/* Firefox autofill */
+input.shad-input:-moz-autofill,
+textarea.shad-textArea:-moz-autofill,
+select.shad-select-trigger:-moz-autofill {
+  box-shadow: 0 0 0px 1000px #1a1d21 inset !important;
+  -moz-text-fill-color: #ffffff !important;
 }
 .theme-light .shad-table-row-header,
 .theme-light .shad-table-row {
@@ -558,9 +610,9 @@ input[type="number"],
 }
 .theme-light input[type="number"],
 .theme-light .shad-input[type="number"] {
-  background: #f1f5f9 !important;
-  color: #1e293b !important;
-  border-color: #2563eb !important;
+  background: #1a1d21 !important;
+  color: #ffffff !important;
+  border-color: #374151 !important;
 }
 .theme-light .input-icon {
   filter: brightness(0) saturate(100%) invert(32%) sepia(98%) saturate(747%)

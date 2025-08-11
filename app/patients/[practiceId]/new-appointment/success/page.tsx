@@ -28,8 +28,18 @@ const AppointmentSuccess = async ({
     <div className="flex h-screen max-h-screen px-[5%]">
       <div className="success-img">
         <h1 className="font-bold text-2xl mb-8 text-center">
-          <Link href="/" className="hover:underline">
-            {practice?.practiceName || "MedCare Bookings"}
+          <Link
+            href="/"
+            className="group inline-flex items-center gap-2 text-white hover:text-gray-200 dark:hover:text-gray-300 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded-md"
+          >
+            <span>{practice?.practiceName || "MedCare Bookings"}</span>
+            <Image
+              src="/assets/icons/arrow.svg"
+              alt="Go to welcome page"
+              width={16}
+              height={16}
+              className="transition-transform group-hover:translate-x-0.5"
+            />
           </Link>
         </h1>
 

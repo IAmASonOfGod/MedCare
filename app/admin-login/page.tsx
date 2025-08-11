@@ -103,6 +103,7 @@ export default function AdminLoginPage() {
               label="Password"
               placeholder="Enter your password"
               control={form.control}
+              type="password"
             />
             <div className="flex justify-between items-center">
               <Link href="#" className="text-blue-600 hover:underline text-sm">
