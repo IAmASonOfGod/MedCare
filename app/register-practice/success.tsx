@@ -41,7 +41,7 @@ const PracticeRegistrationSuccess = () => {
           className="shad-primary-btn border-none mt-8"
           asChild
         >
-          <Link href="/welcome">Back to Welcome Page</Link>
+          <Link href="/">Back to Welcome Page</Link>
         </Button>
 
         <p className="copyright"> © 2025 MedCare</p>

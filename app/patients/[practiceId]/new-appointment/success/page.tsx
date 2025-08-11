@@ -28,7 +28,9 @@ const AppointmentSuccess = async ({
     <div className="flex h-screen max-h-screen px-[5%]">
       <div className="success-img">
         <h1 className="font-bold text-2xl mb-8 text-center">
-          {practice?.practiceName || "MedCare Bookings"}
+          <Link href="/" className="hover:underline">
+            {practice?.practiceName || "MedCare Bookings"}
+          </Link>
         </h1>
 
         <section className="flex flex-col items-center">

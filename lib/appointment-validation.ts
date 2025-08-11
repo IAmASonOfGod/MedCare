@@ -13,9 +13,16 @@ import {
   generateTimeSlots,
   filterAvailableSlots,
 } from "./utils";
-import { getPracticeSettings, getBusinessDaysFromSettings, getBusinessHoursForDay } from "./actions/practice.actions";
+import {
+  getPracticeSettings,
+  getBusinessDaysFromSettings,
+  getBusinessHoursForDay,
+} from "./actions/practice.actions";
 
-export const getBookedAppointmentsForDate = async (date: Date, practiceId: string) => {
+export const getBookedAppointmentsForDate = async (
+  date: Date,
+  practiceId: string
+) => {
   try {
     // Get the start and end of the day
     const startOfDay = new Date(date);
@@ -31,7 +38,7 @@ export const getBookedAppointmentsForDate = async (date: Date, practiceId: strin
       [
         Query.greaterThanEqual("schedule", startOfDay.toISOString()),
         Query.lessThanEqual("schedule", endOfDay.toISOString()),
-        Query.equal("status", ["scheduled", "pending"]),
+        Query.equal("status", ["scheduled"]),
         Query.equal("practiceId", practiceId),
       ]
     );
@@ -48,7 +55,10 @@ export const getBookedAppointmentsForDate = async (date: Date, practiceId: strin
   }
 };
 
-export const getAvailableSlotsForDate = async (date: Date, practiceId: string) => {
+export const getAvailableSlotsForDate = async (
+  date: Date,
+  practiceId: string
+) => {
   try {
     const bookedSlots = await getBookedAppointmentsForDate(date, practiceId);
     const allSlots = await generateTimeSlotsWithSettings(date, practiceId);
@@ -62,26 +72,34 @@ export const getAvailableSlotsForDate = async (date: Date, practiceId: string) =
 };
 
 // New function to generate time slots using practice settings
-export const generateTimeSlotsWithSettings = async (date: Date, practiceId: string) => {
+export const generateTimeSlotsWithSettings = async (
+  date: Date,
+  practiceId: string
+) => {
   try {
     const practiceSettings = await getPracticeSettings(practiceId);
-    
+
     if (!practiceSettings) {
-      console.warn('No practice settings found, using default values');
+      console.warn("No practice settings found, using default values");
       return generateTimeSlots(date);
     }
 
     const businessDays = getBusinessDaysFromSettings(practiceSettings);
+    const allowedDays =
+      Array.isArray(businessDays) && businessDays.length > 0
+        ? businessDays
+        : [1, 2, 3, 4, 5];
     const dayOfWeek = date.getDay();
-    
+
     // Check if the practice is open on this day
-    if (!businessDays.includes(dayOfWeek)) {
+    if (!allowedDays.includes(dayOfWeek)) {
       return [];
     }
 
     const businessHours = getBusinessHoursForDay(practiceSettings, dayOfWeek);
     if (!businessHours) {
-      return [];
+      // Fallback to default business hours when not configured
+      return generateTimeSlots(date);
     }
 
     const slots: Date[] = [];
@@ -96,7 +114,7 @@ export const generateTimeSlotsWithSettings = async (date: Date, practiceId: stri
     endTime.setHours(endHour, endMinute, 0, 0);
 
     let currentSlot = new Date(startTime);
-    
+
     while (currentSlot < endTime) {
       slots.push(new Date(currentSlot));
       currentSlot.setMinutes(currentSlot.getMinutes() + bookingInterval);
@@ -104,7 +122,7 @@ export const generateTimeSlotsWithSettings = async (date: Date, practiceId: stri
 
     return slots;
   } catch (error) {
-    console.error('Error generating time slots with settings:', error);
+    console.error("Error generating time slots with settings:", error);
     return generateTimeSlots(date); // Fallback to default
   }
 };
@@ -115,12 +133,15 @@ export const validateAppointmentSlot = async (
 ): Promise<{ isValid: boolean; message?: string }> => {
   try {
     // Check for conflicts only - UI handles business hours and slot alignment
-    const bookedSlots = await getBookedAppointmentsForDate(proposedDate, practiceId);
-    
+    const bookedSlots = await getBookedAppointmentsForDate(
+      proposedDate,
+      practiceId
+    );
+
     // Get practice settings to determine slot duration
     const practiceSettings = await getPracticeSettings(practiceId);
     const slotDuration = practiceSettings?.consultationInterval || 30; // Default to 30 minutes
-    
+
     const slotEnd = new Date(proposedDate.getTime() + slotDuration * 60000);
 
     const hasConflict = bookedSlots.some((bookedSlot) => {

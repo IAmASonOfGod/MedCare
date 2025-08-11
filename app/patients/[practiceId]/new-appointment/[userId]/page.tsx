@@ -87,7 +87,7 @@ const NewAppointment = ({
 
   if (error) {
     return (
-      <div className="flex h-screen items-center justify-center text-xl text-red-600">
+      <div className="flex h-screen items-center justify-center text-xl text-white">
         {error}
       </div>
     );

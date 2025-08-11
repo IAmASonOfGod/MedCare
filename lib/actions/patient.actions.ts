@@ -27,21 +27,8 @@ export const createUser = async (
       undefined,
       user.name
     );
-    // Save patient data in the patients collection, including practiceId
-    if (user.practiceId) {
-      await databases.createDocument(
-        DATABASE_ID!,
-        PATIENT_COLLECTION_ID!,
-        ID.unique(),
-        {
-          userId: newUser.$id,
-          name: user.name,
-          email: user.email,
-          phone: user.phone,
-          practiceId: user.practiceId,
-        }
-      );
-    }
+    // Do not create a patient document here; the full patient record (with required fields)
+    // is created in registerPatient after file upload and additional details are provided.
     return parseStringify(newUser);
   } catch (error: any) {
     console.error("Error creating user:", error);
@@ -144,6 +131,10 @@ export const registerPatient = async ({
       const inputFile = InputFile.fromBuffer(buffer, fileName);
 
       file = await storage.createFile(BUCKET_ID!, ID.unique(), inputFile);
+    } else {
+      // Ensure fields exist to satisfy Appwrite required attributes
+      // Use nulls for ID and URL when no document is provided
+      // file remains undefined
     }
 
     const newPatient = await databases.createDocument(
@@ -151,8 +142,10 @@ export const registerPatient = async ({
       PATIENT_COLLECTION_ID!,
       ID.unique(),
       {
-        identificationDocumentId: file?.$id || null,
-        identificationDocumentUrl: `${ENDPOINT}/storage/buckets/${BUCKET_ID}/files/${file?.$id}/view?project=${PROJECT_ID}`,
+        identificationDocumentId: file?.$id ?? null,
+        identificationDocumentUrl: file?.$id
+          ? `${ENDPOINT}/storage/buckets/${BUCKET_ID}/files/${file.$id}/view?project=${PROJECT_ID}`
+          : null,
         ...patient,
       }
     );

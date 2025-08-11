@@ -146,22 +146,7 @@ const PracticeRegistrationForm = () => {
                     <SelectItem value="Other">Other</SelectItem>
                   </CustomFormField>
 
-                  {/* Consultation Interval */}
-                  <CustomFormField
-                    fieldType={FormFieldType.SELECT}
-                    name="consultationInterval"
-                    label="Consultation Interval (minutes)"
-                    placeholder="Select interval"
-                    control={form.control}
-                  >
-                    <SelectItem value="15">15 minutes</SelectItem>
-                    <SelectItem value="20">20 minutes</SelectItem>
-                    <SelectItem value="30">30 minutes</SelectItem>
-                    <SelectItem value="45">45 minutes</SelectItem>
-                    <SelectItem value="60">60 minutes</SelectItem>
-                    <SelectItem value="90">90 minutes</SelectItem>
-                    <SelectItem value="120">120 minutes</SelectItem>
-                  </CustomFormField>
+                  
 
                   {/* Conditional field for Specialist or Other */}
                   {(form.watch("practiceType") === "Specialist" ||

@@ -294,8 +294,4 @@ export const PracticeRegistrationSchema = z.object({
   consentToVerification: z.boolean().refine((value) => value === true, {
     message: "You must consent to verification",
   }),
-  consultationInterval: z
-    .number()
-    .min(5, "Consultation interval must be at least 5 minutes")
-    .max(180, "Consultation interval must be at most 180 minutes"),
 });

@@ -7,7 +7,10 @@ import { FormControl } from "@/components/ui/form";
 import Image from "next/image";
 import { getAvailableSlotsForDate } from "@/lib/appointment-validation";
 import { generateTimeSlots } from "@/lib/utils";
-import { getPracticeSettings, getBusinessDaysFromSettings } from "@/lib/actions/practice.actions";
+import {
+  getPracticeSettings,
+  getBusinessDaysFromSettings,
+} from "@/lib/actions/practice.actions";
 
 interface AvailableSlotsDatePickerProps {
   selected: Date | null;
@@ -36,23 +39,16 @@ const AvailableSlotsDatePicker: React.FC<AvailableSlotsDatePickerProps> = ({
 
   // Filter time options to only show available slots
   const filterTime = (time: Date) => {
-    // Check if this time is in the available slots
-    const timeString = time.toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: false,
-    });
+    // While loading, don't disable any times
+    if (isLoading) return true;
 
-    const isAvailable = availableSlots.some((slot) => {
-      const slotString = slot.toLocaleTimeString("en-US", {
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: false,
-      });
-      return slotString === timeString;
-    });
+    const minutesOfDay = (d: Date) => d.getHours() * 60 + d.getMinutes();
+    const timeMinutes = minutesOfDay(time);
 
-    console.log(`Filtering time ${timeString}, available: ${isAvailable}`);
+    const isAvailable = availableSlots.some(
+      (slot) => minutesOfDay(slot) === timeMinutes
+    );
+
     return isAvailable;
   };
 
@@ -91,7 +87,9 @@ const AvailableSlotsDatePicker: React.FC<AvailableSlotsDatePickerProps> = ({
         .then((settings) => {
           if (settings) {
             const days = getBusinessDaysFromSettings(settings);
-            setBusinessDays(days);
+            setBusinessDays(
+              Array.isArray(days) && days.length > 0 ? days : [1, 2, 3, 4, 5]
+            );
           }
         })
         .catch((error) => {
@@ -113,6 +111,9 @@ const AvailableSlotsDatePicker: React.FC<AvailableSlotsDatePickerProps> = ({
   };
 
   const { minTime, maxTime, timeIntervals } = getTimeSettings();
+
+  // When no available slots are returned (e.g., no settings yet), fall back to allowing selection
+  const hasAnySlots = availableSlots.length > 0;
 
   // Load available slots when date changes
   useEffect(() => {
@@ -160,7 +161,7 @@ const AvailableSlotsDatePicker: React.FC<AvailableSlotsDatePickerProps> = ({
               showTimeSelect={showTimeSelect}
               timeInputLabel="Time"
               wrapperClassName={wrapperClassName}
-              filterTime={filterTime}
+              filterTime={hasAnySlots ? filterTime : undefined}
               timeFormat="HH:mm"
               timeIntervals={timeIntervals} // This will be overridden by practice settings
               minTime={minTime} // This will be overridden by practice settings
@@ -168,12 +169,16 @@ const AvailableSlotsDatePicker: React.FC<AvailableSlotsDatePickerProps> = ({
               filterDate={(date) => {
                 // Use dynamic business days from practice settings
                 const day = date.getDay();
-                return businessDays.includes(day);
+                const allowedDays =
+                  Array.isArray(businessDays) && businessDays.length > 0
+                    ? businessDays
+                    : [1, 2, 3, 4, 5];
+                return allowedDays.includes(day);
               }}
               placeholderText={getPlaceholderText()}
               isClearable
               showPopperArrow={false}
-              disabled={isLoading}
+              disabled={false}
               popperClassName="datepicker-popper"
               open={isOpen}
               onCalendarOpen={() => setIsOpen(true)}
