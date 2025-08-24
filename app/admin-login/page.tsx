@@ -12,6 +12,7 @@ import { useState } from "react";
 import dynamic from "next/dynamic";
 import { usePractice } from "@/components/PracticeContext";
 import { fetchPracticeByAdminEmail } from "@/lib/actions/practice.actions";
+import { Models } from "node-appwrite";
 
 const commonPasswords = [
   "123456",
@@ -59,16 +60,40 @@ export default function AdminLoginPage() {
 
   async function onSubmit(data: z.infer<typeof AdminLoginSchema>) {
     setIsLoading(true);
-    // 1. Authenticate admin (your existing logic)
-    // ...your login/auth code...
+    // 1. Authenticate and set JWT cookie
+    await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: data.email,
+        password: data.password,
+        // TODO: replace with real IDs after lookup
+        adminId: data.email,
+        practiceId: practice?.$id || "practice-unknown",
+      }),
+    });
 
     // 2. Fetch the practice by admin email and set the practice name BEFORE showing the modal
-    const practice = await fetchPracticeByAdminEmail(data.email as string);
-    console.log("practice", practice);
-    if (practice) {
-      setPractice(practice);
+    const practiceDoc = await fetchPracticeByAdminEmail(data.email as string);
+    console.log("practice", practiceDoc);
+    if (practiceDoc) {
+      // Convert Document to PracticeInfo with proper type checking
+      const practiceInfo = {
+        $id: practiceDoc.$id,
+        practiceName: (practiceDoc as any).practiceName,
+        practiceType: (practiceDoc as any).practiceType,
+        contactEmail: (practiceDoc as any).contactEmail,
+        contactPhone: (practiceDoc as any).contactPhone,
+        streetAddress: (practiceDoc as any).streetAddress,
+        suburb: (practiceDoc as any).suburb,
+        city: (practiceDoc as any).city,
+        province: (practiceDoc as any).province,
+        postalCode: (practiceDoc as any).postalCode,
+        country: (practiceDoc as any).country,
+      };
+      setPractice(practiceInfo);
     }
-    console.log("practice from onSubmit", practice);
+    console.log("practice from onSubmit", practiceDoc);
 
     // 3. Now show the passkey modal
     setTimeout(() => {
@@ -96,6 +121,9 @@ export default function AdminLoginPage() {
               iconSrc="/assets/icons/email.svg"
               iconAlt="email"
               control={form.control}
+              autoComplete="off"
+              autoCapitalize="none"
+              inputMode="email"
             />
             <CustomFormField
               fieldType={FormFieldType.INPUT}
@@ -104,6 +132,9 @@ export default function AdminLoginPage() {
               placeholder="Enter your password"
               control={form.control}
               type="password"
+              autoComplete="new-password"
+              autoCapitalize="none"
+              inputMode="text"
             />
             <div className="flex justify-between items-center">
               <Link href="#" className="text-blue-600 hover:underline text-sm">

@@ -16,11 +16,17 @@ import {
   getPracticeSettings,
   getBusinessHoursForDay,
 } from "./practice.actions";
+import { sendAppointmentEmail } from "@/lib/notifications/email";
+import { sendSms } from "@/lib/notifications/sms";
 
 export const createAppointment = async (
   appointment: CreateAppointmentParams
 ) => {
   try {
+    const { requireAdmin } = await import("@/lib/auth/requireAdmin");
+    const claims = await requireAdmin();
+    if (claims.practiceId !== appointment.practiceId)
+      throw new Error("Forbidden");
     // Validate the appointment slot before creating
     const validation = await validateAppointmentSlot(
       appointment.schedule,
@@ -37,6 +43,29 @@ export const createAppointment = async (
       ID.unique(),
       appointment
     );
+
+    // Notify patient and admin (basic example)
+    try {
+      const patient = await databases.getDocument(
+        DATABASE_ID!,
+        PATIENT_COLLECTION_ID!,
+        appointment.patientId
+      );
+      const schedule = new Date(appointment.schedule).toLocaleString();
+      if ((patient as any)?.email) {
+        await sendAppointmentEmail({
+          to: (patient as any).email,
+          subject: "Your appointment is scheduled",
+          html: `<p>Your appointment is scheduled for ${schedule}.</p>`,
+        });
+      }
+      if ((patient as any)?.phone) {
+        await sendSms(
+          (patient as any).phone,
+          `Appointment scheduled: ${schedule}`
+        );
+      }
+    } catch (_) {}
 
     return parseStringify(newAppointment);
   } catch (error) {
@@ -234,6 +263,8 @@ export const updateAppointment = async ({
   userId,
 }: UpdateAppointmentParams) => {
   try {
+    const { requireAdmin } = await import("@/lib/auth/requireAdmin");
+    const claims = await requireAdmin();
     const updatedAppointment = await databases.updateDocument(
       DATABASE_ID!,
       APPOINTMENT_COLLECTION_ID!,
@@ -246,6 +277,35 @@ export const updateAppointment = async ({
     }
 
     revalidatePath("/admin");
+
+    // Notifications on status changes
+    try {
+      const updated = await databases.getDocument(
+        DATABASE_ID!,
+        APPOINTMENT_COLLECTION_ID!,
+        appointmentId
+      );
+      const patient = await databases.getDocument(
+        DATABASE_ID!,
+        PATIENT_COLLECTION_ID!,
+        (updated as any).patientId
+      );
+      const schedule = new Date((updated as any).schedule).toLocaleString();
+      const status = (updated as any).status;
+      if ((patient as any)?.email) {
+        await sendAppointmentEmail({
+          to: (patient as any).email,
+          subject: `Appointment ${status}`,
+          html: `<p>Your appointment is ${status} for ${schedule}.</p>`,
+        });
+      }
+      if ((patient as any)?.phone) {
+        await sendSms(
+          (patient as any).phone,
+          `Appointment ${status}: ${schedule}`
+        );
+      }
+    } catch (_) {}
 
     return parseStringify(updatedAppointment);
   } catch (error) {
@@ -438,6 +498,9 @@ export const getAppointmentAnalytics = async (
   period: "week" | "month" | "quarter" = "month"
 ) => {
   try {
+    const { requireAdmin } = await import("@/lib/auth/requireAdmin");
+    const claims = await requireAdmin();
+    if (claims.practiceId !== practiceId) throw new Error("Forbidden");
     const now = new Date();
     let startDate: Date;
 
@@ -536,6 +599,9 @@ export const getCapacityUtilization = async (
   date: string
 ) => {
   try {
+    const { requireAdmin } = await import("@/lib/auth/requireAdmin");
+    const claims = await requireAdmin();
+    if (claims.practiceId !== practiceId) throw new Error("Forbidden");
     const startOfDay = new Date(date);
     startOfDay.setHours(0, 0, 0, 0);
     const endOfDay = new Date(date);

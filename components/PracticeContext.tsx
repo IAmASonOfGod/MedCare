@@ -5,6 +5,15 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 interface PracticeInfo {
   $id: string;
   practiceName: string;
+  practiceType?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  streetAddress?: string;
+  suburb?: string;
+  city?: string;
+  province?: string;
+  postalCode?: string;
+  country?: string;
   // add other fields as needed
 }
 

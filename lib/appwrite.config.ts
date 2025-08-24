@@ -49,3 +49,8 @@ export const databases = new sdk.Databases(client);
 export const storage = new sdk.Storage(client);
 export const messaging = new sdk.Messaging(client);
 export const users = new sdk.Users(client);
+
+// Optional collections for admin onboarding
+export const ADMINS_COLLECTION_ID = process.env.ADMINS_COLLECTION_ID;
+export const ADMIN_INVITES_COLLECTION_ID =
+  process.env.ADMIN_INVITES_COLLECTION_ID;

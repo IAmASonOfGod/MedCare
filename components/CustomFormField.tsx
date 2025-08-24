@@ -39,6 +39,9 @@ interface CustomProps {
   type?: string;
   selectContentClassName?: string;
   practiceId?: string;
+  autoComplete?: string;
+  autoCapitalize?: string;
+  inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
 }
 
 const RenderField = ({ field, props }: { field: any; props: CustomProps }) => {
@@ -77,6 +80,9 @@ const RenderField = ({ field, props }: { field: any; props: CustomProps }) => {
               placeholder={placeholder}
               {...field}
               type={type || "text"}
+          autoComplete={props.autoComplete}
+          autoCapitalize={props.autoCapitalize as any}
+          inputMode={props.inputMode}
               className={`shad-input border-0 ${
                 props.disabled
                   ? "bg-gray-200 dark:bg-gray-700 cursor-not-allowed"

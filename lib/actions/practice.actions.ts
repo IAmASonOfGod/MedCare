@@ -177,6 +177,10 @@ export const savePracticeSettings = async (
   settings: Partial<PracticeSettings>
 ) => {
   try {
+    // AuthZ: ensure the caller owns this practice
+    const { requireAdmin } = await import("@/lib/auth/requireAdmin");
+    const claims = await requireAdmin();
+    if (claims.practiceId !== practiceId) throw new Error("Forbidden");
     // Update the existing practice document with new settings
     const result = await databases.updateDocument(
       validatedDatabaseId,
@@ -202,6 +206,10 @@ export const getPracticeSettings = async (
   practiceId: string
 ): Promise<PracticeSettings | null> => {
   try {
+    // AuthZ: require admin token and restrict to own practice
+    const { requireAdmin } = await import("@/lib/auth/requireAdmin");
+    const claims = await requireAdmin();
+    if (claims.practiceId !== practiceId) throw new Error("Forbidden");
     const result = await databases.getDocument(
       validatedDatabaseId,
       validatedPracticesCollectionId,
