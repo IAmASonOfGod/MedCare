@@ -779,6 +779,11 @@ export const getCapacityUtilization = async (
     );
 
     console.log("[Capacity] appointments total:", appointments.total);
+    console.log("[Capacity] appointments found:", appointments.documents.map((apt: any) => ({
+      id: apt.$id,
+      schedule: apt.schedule,
+      status: apt.status
+    })));
 
     const { getPracticeSettingsForAnalytics } = await import("./practice.actions");
     const settings = await getPracticeSettingsForAnalytics(practiceId);
@@ -845,9 +850,15 @@ export const getCapacityUtilization = async (
       totalCapacity
     );
 
-    const bookedSlots = (appointments.documents as any[]).filter(
+    const bookedAppointments = (appointments.documents as any[]).filter(
       (apt: any) => apt.status === "scheduled" || apt.status === "completed"
-    ).length;
+    );
+    const bookedSlots = bookedAppointments.length;
+    console.log("[Capacity] bookedAppointments:", bookedAppointments.map((apt: any) => ({
+      id: apt.$id,
+      status: apt.status,
+      schedule: apt.schedule
+    })));
     console.log("[Capacity] bookedSlots:", bookedSlots);
 
     const availableSlotsRaw = totalCapacity - bookedSlots;
