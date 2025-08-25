@@ -19,6 +19,67 @@ import {
 import { sendAppointmentEmail } from "@/lib/notifications/email";
 import { sendSms } from "@/lib/notifications/sms";
 
+// Patient-initiated appointment creation (no admin auth required)
+export const createPatientAppointment = async (
+  appointment: CreateAppointmentParams
+) => {
+  try {
+    console.log("Creating patient appointment for practice:", appointment.practiceId);
+    
+    // Validate the appointment slot before creating
+    const validation = await validateAppointmentSlot(
+      appointment.schedule,
+      appointment.practiceId
+    );
+
+    if (!validation.isValid) {
+      throw new Error(validation.message || "Invalid appointment slot");
+    }
+
+    const newAppointment = await databases.createDocument(
+      DATABASE_ID!,
+      APPOINTMENT_COLLECTION_ID!,
+      ID.unique(),
+      appointment
+    );
+
+    // Notify patient and admin (basic example)
+    try {
+      const patient = await databases.getDocument(
+        DATABASE_ID!,
+        PATIENT_COLLECTION_ID!,
+        appointment.patientId
+      );
+      const schedule = new Date(appointment.schedule).toLocaleString();
+      if ((patient as any)?.email) {
+        await sendAppointmentEmail({
+          to: (patient as any).email,
+          subject: "Your appointment is scheduled",
+          html: `<p>Your appointment is scheduled for ${schedule}.</p>`,
+        });
+      }
+      if ((patient as any)?.phone) {
+        await sendSms(
+          (patient as any).phone,
+          `Appointment scheduled: ${schedule}`
+        );
+      }
+    } catch (_) {}
+
+    revalidatePath("/admin");
+    return parseStringify(newAppointment);
+  } catch (error: any) {
+    console.error("Error in createPatientAppointment:", error);
+    console.error("Error details:", {
+      message: error.message,
+      stack: error.stack,
+      appointmentData: appointment
+    });
+    throw error; // Re-throw to handle in the UI
+  }
+};
+
+// Admin-initiated appointment creation (requires admin auth)
 export const createAppointment = async (
   appointment: CreateAppointmentParams
 ) => {

@@ -17,6 +17,7 @@ import { createUser } from "@/lib/actions/patient.actions";
 import { FormFieldType } from "./PatientForm";
 import {
   createAppointment,
+  createPatientAppointment,
   updateAppointment,
 } from "@/lib/actions/appointment.action";
 import { Appointment, Status } from "@/types/appwrite.types";
@@ -92,7 +93,7 @@ const AppointmentForm = ({
           status: status as Status,
         };
         console.log("Appointment data being sent:", appointmentData);
-        const appointment = await createAppointment(appointmentData);
+        const appointment = await createPatientAppointment(appointmentData);
 
         if (appointment) {
           form.reset();
