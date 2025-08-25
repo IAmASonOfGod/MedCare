@@ -1,9 +1,30 @@
 "use server";
 
-import { ID, InputFile, Query } from "node-appwrite";
+import { ID, InputFile, Query, Models } from "node-appwrite";
 import { databases } from "@/lib/appwrite.config";
 import crypto from "crypto";
 import argon2 from "argon2";
+
+// Define interfaces for admin-related documents
+interface AdminInvite extends Models.Document {
+  practiceId: string;
+  email: string;
+  tokenHash: string;
+  expiresAt: string;
+  createdBy: string;
+  createdAt: string;
+  usedAt?: string;
+  usedBy?: string;
+}
+
+interface Admin extends Models.Document {
+  email: string;
+  passwordHash: string;
+  recoveryEmail: string;
+  practiceId: string;
+  role: string;
+  createdAt: string;
+}
 
 const DATABASE_ID = process.env.DATABASE_ID as string;
 const ADMINS_COLLECTION_ID = process.env.ADMINS_COLLECTION_ID as string;
@@ -40,14 +61,16 @@ export async function createAdminInvite(args: {
   return { token };
 }
 
-export async function validateInviteToken(token: string) {
+export async function validateInviteToken(
+  token: string
+): Promise<AdminInvite | null> {
   const tokenHash = hashToken(token);
   const res = await databases.listDocuments(
     DATABASE_ID,
     ADMIN_INVITES_COLLECTION_ID,
     [Query.equal("tokenHash", [tokenHash]), Query.isNull("usedAt")]
   );
-  const doc = res.documents[0];
+  const doc = res.documents[0] as AdminInvite;
   if (!doc) return null;
   if (new Date(doc.expiresAt).getTime() < Date.now()) return null;
   return doc;
@@ -70,11 +93,11 @@ export async function createAdminAccount(args: {
   password: string;
   recoveryEmail: string;
   practiceId: string;
-}) {
+}): Promise<Admin> {
   const passwordHash = await argon2.hash(args.password, {
     type: argon2.argon2id,
   });
-  const admin = await databases.createDocument(
+  const admin = (await databases.createDocument(
     DATABASE_ID,
     ADMINS_COLLECTION_ID,
     ID.unique(),
@@ -86,18 +109,21 @@ export async function createAdminAccount(args: {
       role: "admin",
       createdAt: new Date().toISOString(),
     }
-  );
+  )) as Admin;
   return admin;
 }
 
-export async function findAdminByEmail(email: string) {
+export async function findAdminByEmail(email: string): Promise<Admin | null> {
   const res = await databases.listDocuments(DATABASE_ID, ADMINS_COLLECTION_ID, [
     Query.equal("email", [email]),
     Query.limit(1),
   ]);
-  return res.documents[0] || null;
+  return (res.documents[0] as Admin) || null;
 }
 
-export async function verifyAdminPassword(admin: any, password: string) {
+export async function verifyAdminPassword(
+  admin: Admin,
+  password: string
+): Promise<boolean> {
   return argon2.verify(admin.passwordHash, password);
 }
