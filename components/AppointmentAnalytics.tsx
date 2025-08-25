@@ -25,7 +25,12 @@ const AppointmentAnalytics = ({ practiceId }: AppointmentAnalyticsProps) => {
       console.log("No practiceId, skipping analytics fetch");
       return;
     }
-    console.log("Fetching analytics for practice:", practiceId, "period:", period);
+    console.log(
+      "Fetching analytics for practice:",
+      practiceId,
+      "period:",
+      period
+    );
     setIsLoading(true);
     setError(null);
     try {
@@ -51,22 +56,14 @@ const AppointmentAnalytics = ({ practiceId }: AppointmentAnalyticsProps) => {
     fetchAnalytics();
   }, [practiceId, period]);
 
-  // Add a polling mechanism to refresh analytics periodically
-  useEffect(() => {
-    if (!practiceId) return;
-    
-    const interval = setInterval(() => {
-      console.log("Analytics: Periodic refresh");
-      fetchAnalytics();
-    }, 30000); // Refresh every 30 seconds
-
-    return () => clearInterval(interval);
-  }, [practiceId, period]);
+  // Removed automatic polling to rely on manual refresh and events only
 
   // Manual refresh via custom events and midnight rollover
   useEffect(() => {
     function handleUpdated() {
-      console.log("Analytics: appointments:updated event received, refreshing analytics");
+      console.log(
+        "Analytics: appointments:updated event received, refreshing analytics"
+      );
       fetchAnalytics();
     }
 

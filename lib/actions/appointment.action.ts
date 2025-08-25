@@ -635,35 +635,42 @@ export const getAppointmentAnalytics = async (
     );
     const now = new Date();
     let startDate: Date;
+    let endDate: Date;
 
     switch (period) {
       case "week":
+        // Last 7 days + today + next 7 days (2 week window centered on today)
         startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        endDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
         break;
       case "month":
-        startDate = new Date(now);
-        startDate.setMonth(startDate.getMonth() - 1);
+        // Current month (from 1st to last day of current month)
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
         break;
       case "quarter":
-        startDate = new Date(now);
-        startDate.setMonth(startDate.getMonth() - 3);
+        // Current quarter (3 months)
+        const currentQuarter = Math.floor(now.getMonth() / 3);
+        startDate = new Date(now.getFullYear(), currentQuarter * 3, 1);
+        endDate = new Date(now.getFullYear(), currentQuarter * 3 + 3, 0, 23, 59, 59, 999);
         break;
       default:
-        startDate = new Date(now);
-        startDate.setMonth(startDate.getMonth() - 1);
+        // Default to current month
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
     }
 
     console.log(
       "Date range:",
       startDate.toISOString(),
       "to",
-      now.toISOString()
+      endDate.toISOString()
     );
 
     const queries = [
       Query.equal("practiceId", [practiceId]),
       Query.greaterThanEqual("schedule", startDate.toISOString()),
-      Query.lessThanEqual("schedule", now.toISOString()),
+      Query.lessThanEqual("schedule", endDate.toISOString()),
     ];
 
     const appointments = await databases.listDocuments(
