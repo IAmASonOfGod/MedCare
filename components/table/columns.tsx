@@ -23,6 +23,8 @@ export const columns: ColumnDef<Appointment>[] = [
     cell: ({ row }) => {
       const patient = row.original.patient;
       const patientId = row.original.patientId;
+      const doctor = row.original.doctor; // This might be where doctor comes from
+
       if (!patient) {
         return (
           <div className="text-14-medium">
@@ -31,6 +33,23 @@ export const columns: ColumnDef<Appointment>[] = [
           </div>
         );
       }
+
+      // If there's doctor info, display it with image
+      if (doctor) {
+        return (
+          <div className="flex items-center gap-3">
+            <Image
+              src={doctor?.image || "/assets/images/dr-green.png"}
+              alt={doctor.name || "Doctor"}
+              width={100}
+              height={100}
+              className="size-8 rounded-full"
+            />
+            <p className="text-14-medium">{doctor.name}</p>
+          </div>
+        );
+      }
+
       return <p className="text-14-medium">{patient.name}</p>;
     },
   },
