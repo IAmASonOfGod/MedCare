@@ -2,7 +2,6 @@ import { cookies } from "next/headers";
 import { verifyToken, AdminClaims } from "./jwt";
 
 export async function requireAdmin(): Promise<AdminClaims> {
-  const authHeader = (typeof headers !== "undefined" ? undefined : undefined);
   const cookieStore = cookies();
   const token = cookieStore.get("admin_token")?.value;
   if (!token) throw new Error("Unauthorized");
@@ -10,5 +9,3 @@ export async function requireAdmin(): Promise<AdminClaims> {
   if (!claims?.adminId || !claims?.practiceId) throw new Error("Unauthorized");
   return claims;
 }
-
-
