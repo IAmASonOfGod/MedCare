@@ -301,6 +301,12 @@ const AppointmentAnalytics = ({ practiceId }: AppointmentAnalyticsProps) => {
               </span>
             </div>
             <div className="flex justify-between items-center">
+              <span className="text-white">Pending</span>
+              <span className="font-semibold text-white">
+                {analytics.pending || 0}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
               <span className="text-white">Completed</span>
               <span className="font-semibold text-white">
                 {analytics.completed}

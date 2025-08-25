@@ -351,14 +351,6 @@ const Admin = () => {
         </section>
 
         <section className="admin-stat">
-          <div className="cursor-pointer transition-all duration-200 transform hover:scale-105">
-            <StatCard
-              type="appointments"
-              count={appointmentCounts.totalCount}
-              label="Total appointments"
-              icon="/assets/icons/appointments.svg"
-            />
-          </div>
           <div
             onClick={() => handleStatusFilter("scheduled")}
             className={`cursor-pointer transition-all duration-200 transform hover:scale-105 ${
