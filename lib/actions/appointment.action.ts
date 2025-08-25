@@ -23,10 +23,29 @@ export const createAppointment = async (
   appointment: CreateAppointmentParams
 ) => {
   try {
+    console.log("Creating appointment for practice:", appointment.practiceId);
+
+    // Check if JWT_SECRET exists
+    if (!process.env.JWT_SECRET) {
+      console.error(
+        "JWT_SECRET environment variable is not set in appointment creation"
+      );
+      throw new Error("Server configuration error: JWT_SECRET missing");
+    }
+
     const { requireAdmin } = await import("@/lib/auth/requireAdmin");
+    console.log("Attempting to authenticate admin for appointment creation");
+
     const claims = await requireAdmin();
-    if (claims.practiceId !== appointment.practiceId)
+    console.log("Admin authenticated, practice ID:", claims.practiceId);
+
+    if (claims.practiceId !== appointment.practiceId) {
+      console.error("Practice ID mismatch:", {
+        tokenPracticeId: claims.practiceId,
+        appointmentPracticeId: appointment.practiceId,
+      });
       throw new Error("Forbidden");
+    }
     // Validate the appointment slot before creating
     const validation = await validateAppointmentSlot(
       appointment.schedule,
@@ -68,8 +87,13 @@ export const createAppointment = async (
     } catch (_) {}
 
     return parseStringify(newAppointment);
-  } catch (error) {
-    console.log(error);
+  } catch (error: any) {
+    console.error("Error in createAppointment:", error);
+    console.error("Error details:", {
+      message: error.message,
+      stack: error.stack,
+      appointmentData: appointment,
+    });
     throw error; // Re-throw to handle in the UI
   }
 };
