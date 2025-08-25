@@ -27,9 +27,12 @@ import { useRouter } from "next/navigation";
 const Admin = () => {
   const [appointments, setAppointments] = useState<any>(null);
   const [appointmentCounts, setAppointmentCounts] = useState<any>({
+    totalCount: 0,
     scheduledCount: 0,
     pendingCount: 0,
     cancelledCount: 0,
+    completedCount: 0,
+    noShowCount: 0,
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
@@ -348,6 +351,14 @@ const Admin = () => {
         </section>
 
         <section className="admin-stat">
+          <div className="cursor-pointer transition-all duration-200 transform hover:scale-105">
+            <StatCard
+              type="appointments"
+              count={appointmentCounts.totalCount}
+              label="Total appointments"
+              icon="/assets/icons/appointments.svg"
+            />
+          </div>
           <div
             onClick={() => handleStatusFilter("scheduled")}
             className={`cursor-pointer transition-all duration-200 transform hover:scale-105 ${
@@ -376,6 +387,21 @@ const Admin = () => {
               count={appointmentCounts.pendingCount}
               label="Pending appointments"
               icon="/assets/icons/pending.svg"
+            />
+          </div>
+          <div
+            onClick={() => handleStatusFilter("completed")}
+            className={`cursor-pointer transition-all duration-200 transform hover:scale-105 ${
+              statusFilter === "completed"
+                ? "ring-2 ring-blue-500 ring-opacity-50"
+                : ""
+            }`}
+          >
+            <StatCard
+              type="appointments"
+              count={appointmentCounts.completedCount}
+              label="Completed appointments"
+              icon="/assets/icons/check.svg"
             />
           </div>
           <div

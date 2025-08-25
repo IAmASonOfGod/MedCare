@@ -66,7 +66,15 @@ export const createPatientAppointment = async (
       }
     } catch (_) {}
 
+    // Invalidate multiple paths to ensure dashboard updates
     revalidatePath("/admin");
+    revalidatePath("/");
+    
+    // Trigger a custom event for real-time updates
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("appointments:updated"));
+    }
+    
     return parseStringify(newAppointment);
   } catch (error: any) {
     console.error("Error in createPatientAppointment:", error);
@@ -146,6 +154,15 @@ export const createAppointment = async (
         );
       }
     } catch (_) {}
+
+    // Invalidate multiple paths to ensure dashboard updates
+    revalidatePath("/admin");
+    revalidatePath("/");
+    
+    // Trigger a custom event for real-time updates
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("appointments:updated"));
+    }
 
     return parseStringify(newAppointment);
   } catch (error: any) {
@@ -249,6 +266,15 @@ export const getAppointmentCounts = async (practiceId?: string) => {
       queries.push(Query.equal("practiceId", [practiceId]));
     }
 
+    console.log("Fetching appointment counts for practice:", practiceId);
+
+    // Get all appointments for total count
+    const allAppointments = await databases.listDocuments(
+      DATABASE_ID!,
+      APPOINTMENT_COLLECTION_ID!,
+      queries
+    );
+
     const scheduledQuery = [...queries, Query.equal("status", ["scheduled"])];
     const scheduledAppointments = await databases.listDocuments(
       DATABASE_ID!,
@@ -270,17 +296,40 @@ export const getAppointmentCounts = async (practiceId?: string) => {
       cancelledQuery
     );
 
-    return {
+    const completedQuery = [...queries, Query.equal("status", ["completed"])];
+    const completedAppointments = await databases.listDocuments(
+      DATABASE_ID!,
+      APPOINTMENT_COLLECTION_ID!,
+      completedQuery
+    );
+
+    const noShowQuery = [...queries, Query.equal("status", ["no-show"])];
+    const noShowAppointments = await databases.listDocuments(
+      DATABASE_ID!,
+      APPOINTMENT_COLLECTION_ID!,
+      noShowQuery
+    );
+
+    const counts = {
+      totalCount: allAppointments.total,
       scheduledCount: scheduledAppointments.total,
       pendingCount: pendingAppointments.total,
       cancelledCount: cancelledAppointments.total,
+      completedCount: completedAppointments.total,
+      noShowCount: noShowAppointments.total,
     };
+
+    console.log("Appointment counts:", counts);
+    return counts;
   } catch (error) {
-    console.log(error);
+    console.error("Error fetching appointment counts:", error);
     return {
+      totalCount: 0,
       scheduledCount: 0,
       pendingCount: 0,
       cancelledCount: 0,
+      completedCount: 0,
+      noShowCount: 0,
     };
   }
 };
@@ -361,7 +410,14 @@ export const updateAppointment = async ({
       throw new Error("Appointment not found");
     }
 
+    // Invalidate multiple paths to ensure dashboard updates
     revalidatePath("/admin");
+    revalidatePath("/");
+    
+    // Trigger a custom event for real-time updates
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("appointments:updated"));
+    }
 
     // Notifications on status changes
     try {
