@@ -69,14 +69,9 @@ export const createPatientAppointment = async (
       }
     } catch (_) {}
 
-    // Invalidate multiple paths to ensure dashboard updates
+        // Invalidate multiple paths to ensure dashboard updates
     revalidatePath("/admin");
     revalidatePath("/");
-
-    // Trigger a custom event for real-time updates
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent("appointments:updated"));
-    }
 
     return parseStringify(newAppointment);
   } catch (error: any) {
@@ -158,14 +153,9 @@ export const createAppointment = async (
       }
     } catch (_) {}
 
-    // Invalidate multiple paths to ensure dashboard updates
+        // Invalidate multiple paths to ensure dashboard updates
     revalidatePath("/admin");
     revalidatePath("/");
-
-    // Trigger a custom event for real-time updates
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent("appointments:updated"));
-    }
 
     return parseStringify(newAppointment);
   } catch (error: any) {
@@ -413,14 +403,9 @@ export const updateAppointment = async ({
       throw new Error("Appointment not found");
     }
 
-    // Invalidate multiple paths to ensure dashboard updates
+        // Invalidate multiple paths to ensure dashboard updates
     revalidatePath("/admin");
     revalidatePath("/");
-
-    // Trigger a custom event for real-time updates
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent("appointments:updated"));
-    }
 
     // Notifications on status changes
     try {

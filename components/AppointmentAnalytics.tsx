@@ -21,18 +21,26 @@ const AppointmentAnalytics = ({ practiceId }: AppointmentAnalyticsProps) => {
   const todayIso = useMemo(() => new Date().toISOString().split("T")[0], []);
 
   const fetchAnalytics = async () => {
-    if (!practiceId) return;
+    if (!practiceId) {
+      console.log("No practiceId, skipping analytics fetch");
+      return;
+    }
+    console.log("Fetching analytics for practice:", practiceId, "period:", period);
     setIsLoading(true);
     setError(null);
     try {
+      console.log("Calling analytics functions...");
       const [analyticsData, capacityData] = await Promise.all([
         getAppointmentAnalytics(practiceId, period),
         getCapacityUtilization(practiceId, todayIso),
       ]);
+      console.log("Analytics data received:", analyticsData);
+      console.log("Capacity data received:", capacityData);
       setAnalytics(analyticsData);
       setCapacity(capacityData);
     } catch (e: any) {
       console.error("Error fetching analytics:", e);
+      console.error("Error details:", e.message, e.stack);
       setError("Unable to load analytics right now. Please try again.");
     } finally {
       setIsLoading(false);
@@ -43,9 +51,22 @@ const AppointmentAnalytics = ({ practiceId }: AppointmentAnalyticsProps) => {
     fetchAnalytics();
   }, [practiceId, period]);
 
+  // Add a polling mechanism to refresh analytics periodically
+  useEffect(() => {
+    if (!practiceId) return;
+    
+    const interval = setInterval(() => {
+      console.log("Analytics: Periodic refresh");
+      fetchAnalytics();
+    }, 30000); // Refresh every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [practiceId, period]);
+
   // Manual refresh via custom events and midnight rollover
   useEffect(() => {
     function handleUpdated() {
+      console.log("Analytics: appointments:updated event received, refreshing analytics");
       fetchAnalytics();
     }
 

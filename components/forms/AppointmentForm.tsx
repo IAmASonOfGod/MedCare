@@ -96,6 +96,12 @@ const AppointmentForm = ({
         const appointment = await createPatientAppointment(appointmentData);
 
         if (appointment) {
+          // Dispatch event for analytics refresh
+          if (typeof window !== "undefined") {
+            console.log("Dispatching appointments:updated event");
+            window.dispatchEvent(new CustomEvent("appointments:updated"));
+          }
+          
           form.reset();
           router.push(
             `/patients/${practiceId}/new-appointment/success?appointmentId=${appointment.$id}&userId=${userId}`
@@ -125,6 +131,12 @@ const AppointmentForm = ({
         const updatedAppointment = await updateAppointment(appointmentToUpdate);
 
         if (updatedAppointment) {
+          // Dispatch event for analytics refresh
+          if (typeof window !== "undefined") {
+            console.log("Dispatching appointments:updated event for update");
+            window.dispatchEvent(new CustomEvent("appointments:updated"));
+          }
+          
           setOpen && setOpen(false);
           form.reset();
         }
