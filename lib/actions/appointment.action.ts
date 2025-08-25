@@ -747,29 +747,53 @@ export const getAppointmentAnalytics = async (
   }
 };
 
-// Get capacity utilization based on practice settings
+// Get capacity utilization based on practice settings for a specific period
 export const getCapacityUtilization = async (
   practiceId: string,
-  date: string
+  period: "week" | "month" | "quarter" = "month"
 ) => {
   try {
     console.log(
       "Getting capacity utilization for practice:",
       practiceId,
-      "date:",
-      date
+      "period:",
+      period
     );
-    const startOfDay = new Date(date);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(date);
-    endOfDay.setHours(23, 59, 59, 999);
+    
+    // Use same date range logic as analytics
+    const now = new Date();
+    let startDate: Date;
+    let endDate: Date;
 
-    console.log("[Capacity] date:", date);
+    switch (period) {
+      case "week":
+        // Last 7 days + today + next 7 days (2 week window centered on today)
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        endDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+        break;
+      case "month":
+        // Current month (from 1st to last day of current month)
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+        break;
+      case "quarter":
+        // Current quarter (3 months)
+        const currentQuarter = Math.floor(now.getMonth() / 3);
+        startDate = new Date(now.getFullYear(), currentQuarter * 3, 1);
+        endDate = new Date(now.getFullYear(), currentQuarter * 3 + 3, 0, 23, 59, 59, 999);
+        break;
+      default:
+        // Default to current month
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    }
+
+    console.log("[Capacity] period:", period, "from:", startDate.toISOString(), "to:", endDate.toISOString());
 
     const appointmentQueries = [
       Query.equal("practiceId", [practiceId]),
-      Query.greaterThanEqual("schedule", startOfDay.toISOString()),
-      Query.lessThanEqual("schedule", endOfDay.toISOString()),
+      Query.greaterThanEqual("schedule", startDate.toISOString()),
+      Query.lessThanEqual("schedule", endDate.toISOString()),
     ];
 
     const appointments = await databases.listDocuments(
@@ -793,25 +817,7 @@ export const getCapacityUtilization = async (
     );
     if (!settings) {
       return {
-        date,
-        totalCapacity: 0,
-        bookedSlots: 0,
-        availableSlots: 0,
-        utilizationRate: 0,
-      };
-    }
-
-    const dayOfWeek = new Date(date).getDay();
-    // In Next.js, functions exported from a "use server" module may be proxied and return a Promise
-    // even if they are synchronous utilities. Await to handle both Promise and non-Promise returns.
-    const hours = await (getBusinessHoursForDay as any)(
-      settings as any,
-      dayOfWeek
-    );
-    console.log("[Capacity] hours:", hours);
-    if (!hours) {
-      return {
-        date,
+        period,
         totalCapacity: 0,
         bookedSlots: 0,
         availableSlots: 0,
@@ -824,29 +830,44 @@ export const getCapacityUtilization = async (
       intervalMinutes = 30;
     console.log("[Capacity] intervalMinutes:", intervalMinutes);
 
-    const start = new Date(date);
-    start.setHours(hours.startHour, hours.startMinute, 0, 0);
-    const end = new Date(date);
-    end.setHours(hours.endHour, hours.endMinute, 0, 0);
+    // Calculate total capacity across all business days in the period
+    let totalCapacity = 0;
+    const currentDate = new Date(startDate);
+    
+    while (currentDate <= endDate) {
+      const dayOfWeek = currentDate.getDay();
+      const hours = await (getBusinessHoursForDay as any)(
+        settings as any,
+        dayOfWeek
+      );
+      
+      if (hours) {
+        const start = new Date(currentDate);
+        start.setHours(hours.startHour, hours.startMinute, 0, 0);
+        const end = new Date(currentDate);
+        end.setHours(hours.endHour, hours.endMinute, 0, 0);
 
-    const totalMinutesRaw = Math.floor(
-      (end.getTime() - start.getTime()) / 60000
-    );
-    const totalMinutes =
-      Number.isFinite(totalMinutesRaw) && totalMinutesRaw > 0
-        ? totalMinutesRaw
-        : 0;
-    const totalCapacityRaw =
-      intervalMinutes > 0 ? Math.floor(totalMinutes / intervalMinutes) : 0;
-    const totalCapacity =
-      Number.isFinite(totalCapacityRaw) && totalCapacityRaw >= 0
-        ? totalCapacityRaw
-        : 0;
+        const totalMinutesRaw = Math.floor(
+          (end.getTime() - start.getTime()) / 60000
+        );
+        const totalMinutes =
+          Number.isFinite(totalMinutesRaw) && totalMinutesRaw > 0
+            ? totalMinutesRaw
+            : 0;
+        const dayCapacity =
+          intervalMinutes > 0 ? Math.floor(totalMinutes / intervalMinutes) : 0;
+        
+        if (Number.isFinite(dayCapacity) && dayCapacity >= 0) {
+          totalCapacity += dayCapacity;
+        }
+      }
+      
+      // Move to next day
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
 
     console.log(
-      "[Capacity] totalMinutes:",
-      totalMinutes,
-      "totalCapacity:",
+      "[Capacity] totalCapacity for period:",
       totalCapacity
     );
 
@@ -876,7 +897,7 @@ export const getCapacityUtilization = async (
     );
 
     const result = {
-      date,
+      period,
       totalCapacity,
       bookedSlots,
       availableSlots,
@@ -889,7 +910,7 @@ export const getCapacityUtilization = async (
     console.error("Error in getCapacityUtilization:", error);
     // Return default values instead of throwing
     return {
-      date,
+      period,
       totalCapacity: 0,
       bookedSlots: 0,
       availableSlots: 0,

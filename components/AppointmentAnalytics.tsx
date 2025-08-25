@@ -18,7 +18,7 @@ const AppointmentAnalytics = ({ practiceId }: AppointmentAnalyticsProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const todayIso = useMemo(() => new Date().toISOString().split("T")[0], []);
+  // todayIso removed - capacity now uses same period as analytics
 
   const fetchAnalytics = async (showLoading: boolean = true) => {
     if (!practiceId) {
@@ -41,7 +41,7 @@ const AppointmentAnalytics = ({ practiceId }: AppointmentAnalyticsProps) => {
       console.log("Calling analytics functions...");
       const [analyticsData, capacityData] = await Promise.all([
         getAppointmentAnalytics(practiceId, period),
-        getCapacityUtilization(practiceId, todayIso),
+        getCapacityUtilization(practiceId, period),
       ]);
       console.log("Analytics data received:", analyticsData);
       console.log("Capacity data received:", capacityData);
