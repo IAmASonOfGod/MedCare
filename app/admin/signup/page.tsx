@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -27,7 +27,7 @@ const Schema = z
     path: ["confirm"],
   });
 
-export default function AdminSignupPage() {
+function AdminSignupContent() {
   const params = useSearchParams();
   const router = useRouter();
   const token = params.get("token") || "";
@@ -116,5 +116,21 @@ export default function AdminSignupPage() {
         </Form>
       </div>
     </main>
+  );
+}
+
+export default function AdminSignupPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen flex items-center justify-center p-6">
+          <div className="w-full max-w-md bg-dark-400 border border-dark-500 rounded-xl p-6">
+            <div className="text-white">Loading...</div>
+          </div>
+        </main>
+      }
+    >
+      <AdminSignupContent />
+    </Suspense>
   );
 }
