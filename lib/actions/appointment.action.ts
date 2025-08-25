@@ -780,7 +780,8 @@ export const getCapacityUtilization = async (
 
     console.log("[Capacity] appointments total:", appointments.total);
 
-    const settings = await getPracticeSettings(practiceId);
+    const { getPracticeSettingsForAnalytics } = await import("./practice.actions");
+    const settings = await getPracticeSettingsForAnalytics(practiceId);
     console.log(
       "[Capacity] settings interval/raw:",
       settings?.consultationInterval

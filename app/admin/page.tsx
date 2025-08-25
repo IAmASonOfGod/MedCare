@@ -53,11 +53,14 @@ const Admin = () => {
 
   const fetchAppointments = async (
     page: number = 1,
-    mode: "all" | "today" | "upcoming" = viewMode
+    mode: "all" | "today" | "upcoming" = viewMode,
+    showLoading: boolean = true
   ) => {
     if (!practice?.$id) return;
 
-    setIsLoading(true);
+    if (showLoading) {
+      setIsLoading(true);
+    }
     setAppointmentsError(null);
     try {
       let data;
@@ -80,9 +83,13 @@ const Admin = () => {
         (error.message.includes("network") || error.message.includes("fetch"))
           ? "Network error. Please check your connection and try again."
           : "Unable to load appointments. Please try again.";
-      setAppointmentsError(message);
+      if (showLoading) {
+        setAppointmentsError(message);
+      }
     } finally {
-      setIsLoading(false);
+      if (showLoading) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -104,40 +111,13 @@ const Admin = () => {
     }
   }, [practice?.$id]);
 
-  // Auto-refresh every 30s, respecting current mode/page
+  // Auto-refresh every 30s in background (no loading state)
   useEffect(() => {
     if (!practice?.$id) return;
-    const interval = setInterval(async () => {
-      try {
-        let result;
-        switch (viewMode) {
-          case "today":
-            result = await getTodaysAppointments(practice.$id);
-            break;
-          case "upcoming":
-            result = await getUpcomingAppointments(
-              practice.$id,
-              currentPage,
-              20
-            );
-            break;
-          default:
-            result = await getRecentAppointmentList(
-              practice.$id,
-              currentPage,
-              20
-            );
-        }
-        if (result) setAppointments(result);
-      } catch (error) {
-        console.error("Auto-refresh appointments error:", error);
-      }
-      try {
-        const counts = await getAppointmentCounts(practice.$id);
-        if (counts) setAppointmentCounts(counts);
-      } catch (error) {
-        console.error("Auto-refresh counts error:", error);
-      }
+    const interval = setInterval(() => {
+      console.log("Admin: Background auto-refresh (no loading)");
+      fetchAppointments(currentPage, viewMode, false); // false = don't show loading state
+      fetchCounts(); // fetchCounts doesn't have loading state anyway
     }, 30000);
     return () => clearInterval(interval);
   }, [practice?.$id, currentPage, viewMode]);
@@ -146,7 +126,7 @@ const Admin = () => {
   useEffect(() => {
     function handleUpdated() {
       if (!practice?.$id) return;
-      fetchAppointments(currentPage, viewMode);
+      fetchAppointments(currentPage, viewMode, false); // false = don't show loading for events
       fetchCounts();
     }
     if (typeof window !== "undefined") {
@@ -516,13 +496,8 @@ const Admin = () => {
               <button
                 onClick={async () => {
                   if (practice?.$id) {
-                    setIsLoading(true);
-                    try {
-                      await fetchAppointments(currentPage, viewMode);
-                      await fetchCounts();
-                    } finally {
-                      setIsLoading(false);
-                    }
+                    await fetchAppointments(currentPage, viewMode, true); // true = show loading for manual refresh
+                    await fetchCounts();
                   }
                 }}
                 disabled={isLoading}
@@ -577,7 +552,7 @@ const Admin = () => {
               </h3>
               <p className="text-red-300 text-sm">{appointmentsError}</p>
               <button
-                onClick={() => fetchAppointments(currentPage, viewMode)}
+                onClick={() => fetchAppointments(currentPage, viewMode, true)}
                 className="mt-3 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
               >
                 Retry

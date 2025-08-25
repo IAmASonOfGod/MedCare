@@ -20,7 +20,7 @@ const AppointmentAnalytics = ({ practiceId }: AppointmentAnalyticsProps) => {
 
   const todayIso = useMemo(() => new Date().toISOString().split("T")[0], []);
 
-  const fetchAnalytics = async () => {
+  const fetchAnalytics = async (showLoading: boolean = true) => {
     if (!practiceId) {
       console.log("No practiceId, skipping analytics fetch");
       return;
@@ -29,9 +29,13 @@ const AppointmentAnalytics = ({ practiceId }: AppointmentAnalyticsProps) => {
       "Fetching analytics for practice:",
       practiceId,
       "period:",
-      period
+      period,
+      "showLoading:",
+      showLoading
     );
-    setIsLoading(true);
+    if (showLoading) {
+      setIsLoading(true);
+    }
     setError(null);
     try {
       console.log("Calling analytics functions...");
@@ -46,9 +50,13 @@ const AppointmentAnalytics = ({ practiceId }: AppointmentAnalyticsProps) => {
     } catch (e: any) {
       console.error("Error fetching analytics:", e);
       console.error("Error details:", e.message, e.stack);
-      setError("Unable to load analytics right now. Please try again.");
+      if (showLoading) {
+        setError("Unable to load analytics right now. Please try again.");
+      }
     } finally {
-      setIsLoading(false);
+      if (showLoading) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -56,7 +64,17 @@ const AppointmentAnalytics = ({ practiceId }: AppointmentAnalyticsProps) => {
     fetchAnalytics();
   }, [practiceId, period]);
 
-  // Removed automatic polling to rely on manual refresh and events only
+  // Auto-refresh every 30 seconds in background (no loading state)
+  useEffect(() => {
+    if (!practiceId) return;
+
+    const interval = setInterval(() => {
+      console.log("Analytics: Background auto-refresh (no loading)");
+      fetchAnalytics(false); // false = don't show loading state
+    }, 30000); // Refresh every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [practiceId, period]);
 
   // Manual refresh via custom events and midnight rollover
   useEffect(() => {
@@ -64,7 +82,7 @@ const AppointmentAnalytics = ({ practiceId }: AppointmentAnalyticsProps) => {
       console.log(
         "Analytics: appointments:updated event received, refreshing analytics"
       );
-      fetchAnalytics();
+      fetchAnalytics(false); // false = don't show loading state for event-driven updates
     }
 
     if (typeof window !== "undefined") {
@@ -80,7 +98,7 @@ const AppointmentAnalytics = ({ practiceId }: AppointmentAnalyticsProps) => {
           now.getDate() + 1
         ).getTime() - now.getTime();
       const timer = setTimeout(() => {
-        fetchAnalytics();
+        fetchAnalytics(false); // false = don't show loading state for midnight rollover
       }, msToMidnight + 1000);
 
       return () => {
@@ -107,7 +125,7 @@ const AppointmentAnalytics = ({ practiceId }: AppointmentAnalyticsProps) => {
         </h3>
         <p className="text-red-300 text-sm">{error}</p>
         <button
-          onClick={fetchAnalytics}
+          onClick={() => fetchAnalytics(true)}
           className="mt-3 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
         >
           Retry
@@ -158,7 +176,7 @@ const AppointmentAnalytics = ({ practiceId }: AppointmentAnalyticsProps) => {
           </div>
         </div>
         <button
-          onClick={fetchAnalytics}
+          onClick={() => fetchAnalytics(true)}
           disabled={isLoading}
           className="flex items-center gap-2 rounded-full px-4 py-2 text-base font-semibold shadow-md bg-dark-400 text-white hover:bg-dark-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           title="Refresh analytics"

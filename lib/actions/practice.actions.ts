@@ -229,6 +229,36 @@ export const getPracticeSettings = async (
   }
 };
 
+// Non-authenticated version for analytics and capacity calculations
+export const getPracticeSettingsForAnalytics = async (
+  practiceId: string
+): Promise<PracticeSettings | null> => {
+  try {
+    console.log("[Analytics] Getting practice settings for:", practiceId);
+    const result = await databases.getDocument(
+      validatedDatabaseId,
+      validatedPracticesCollectionId,
+      practiceId
+    );
+    const coerced = {
+      ...(result as any),
+      consultationInterval:
+        (result as any).consultationInterval != null
+          ? Number((result as any).consultationInterval)
+          : undefined,
+    } as PracticeSettings;
+    console.log("[Analytics] Practice settings:", {
+      consultationInterval: coerced.consultationInterval,
+      mondayOpen: coerced.mondayOpen,
+      mondayClose: coerced.mondayClose,
+    });
+    return coerced;
+  } catch (error) {
+    console.error("Error getting practice settings for analytics:", error);
+    return null;
+  }
+};
+
 // Helper function to get business days from practice settings
 export const getBusinessDaysFromSettings = (
   settings: PracticeSettings
