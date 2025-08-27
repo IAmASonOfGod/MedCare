@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { usePractice } from "@/components/PracticeContext";
 import {
   getRecentAppointmentList,
@@ -8,6 +8,7 @@ import {
   getTodaysAppointments,
   getUpcomingAppointments,
 } from "@/lib/actions/appointment.action";
+import { getAppointmentCountsByPeriod } from "@/lib/actions/appointment.action";
 import StatCard from "@/components/StatCard";
 import Link from "next/link";
 import { columns } from "@/components/table/columns";
@@ -39,6 +40,10 @@ const Admin = () => {
   const [viewMode, setViewMode] = useState<"all" | "today" | "upcoming">("all");
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("");
+  // Analytics period (drives AppointmentAnalytics)
+  const [timePeriod, setTimePeriod] = useState<"today" | "week" | "month" | "quarter" | "year" | "all-time">("today");
+  // Stat cards period (drives counts fetched for cards)
+  const [cardsPeriod, setCardsPeriod] = useState<"today" | "week" | "month" | "quarter" | "year" | "all-time">("today");
   const [collapsedSections, setCollapsedSections] = useState({
     analytics: false,
     appointments: false,
@@ -48,8 +53,67 @@ const Admin = () => {
   const [appointmentsError, setAppointmentsError] = useState<string | null>(
     null
   );
+  const [filterNotification, setFilterNotification] = useState<string | null>(null);
+  const [clickedCard, setClickedCard] = useState<string | null>(null);
+  const [highlightTable, setHighlightTable] = useState<boolean>(false);
   const { practice } = usePractice();
+  const statCardsSectionRef = useRef<HTMLDivElement | null>(null);
   const router = useRouter();
+
+  // Date range helpers
+  const formatDate = (date: Date, includeWeekday: boolean = false) => {
+    const fmt = new Intl.DateTimeFormat("en-GB", {
+      weekday: includeWeekday ? "long" : undefined,
+      year: "numeric",
+      month: includeWeekday ? "long" : "short",
+      day: "numeric",
+    });
+    const parts = fmt.formatToParts(date);
+    const get = (t: string) => parts.find((p) => p.type === t)?.value || "";
+    const day = get("day");
+    const month = get("month");
+    const year = get("year");
+    const weekday = includeWeekday ? get("weekday") : "";
+    return includeWeekday
+      ? `${weekday}, ${day} ${month} ${year}`
+      : `${day} ${month} ${year}`;
+  };
+
+  const getRangeLabel = (period: "today" | "week" | "month" | "quarter" | "year" | "all-time") => {
+    const now = new Date();
+    let start = new Date();
+    let end = new Date();
+
+    switch (period) {
+      case "today": {
+        return formatDate(now, true);
+      }
+      case "week": {
+        start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        end = new Date(now.getTime() + 6 * 24 * 60 * 60 * 1000);
+        return `${formatDate(start)} – ${formatDate(end)}`;
+      }
+      case "month": {
+        start = new Date(now.getFullYear(), now.getMonth(), 1);
+        end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        return `${formatDate(start)} – ${formatDate(end)}`;
+      }
+      case "quarter": {
+        const q = Math.floor(now.getMonth() / 3);
+        start = new Date(now.getFullYear(), q * 3, 1);
+        end = new Date(now.getFullYear(), q * 3 + 3, 0);
+        return `${formatDate(start)} – ${formatDate(end)}`;
+      }
+      case "year": {
+        start = new Date(now.getFullYear(), 0, 1);
+        end = new Date(now.getFullYear(), 11, 31);
+        return `${formatDate(start)} – ${formatDate(end)}`;
+      }
+      case "all-time":
+      default:
+        return "All time";
+    }
+  };
 
   const fetchAppointments = async (
     page: number = 1,
@@ -96,7 +160,7 @@ const Admin = () => {
   const fetchCounts = async () => {
     if (!practice?.$id) return;
     try {
-      const counts = await getAppointmentCounts(practice.$id);
+      const counts = await getAppointmentCountsByPeriod(practice.$id, cardsPeriod);
       setAppointmentCounts(counts);
     } catch (error) {
       console.error("Error fetching counts:", error);
@@ -110,6 +174,12 @@ const Admin = () => {
       localStorage.setItem("adminReady", "true");
     }
   }, [practice?.$id]);
+
+  useEffect(() => {
+    if (practice?.$id) {
+      fetchCounts();
+    }
+  }, [practice?.$id, cardsPeriod]);
 
   // Auto-refresh every 30s in background (no loading state)
   useEffect(() => {
@@ -144,8 +214,58 @@ const Admin = () => {
   };
 
   const handleStatusFilter = (status: string) => {
-    setStatusFilter(status === statusFilter ? "" : status);
+    const newFilter = status === statusFilter ? "" : status;
+    
+    // Show click animation
+    if (newFilter) {
+      setClickedCard(status);
+      setTimeout(() => setClickedCard(null), 300);
+    }
+    
+    setStatusFilter(newFilter);
     setViewMode("all");
+    // Ensure appointments section is expanded so scroll lands on visible content
+    setCollapsedSections((prev) => ({ ...prev, appointments: false }));
+    
+    // Scroll to appointments section to show the filtered results
+    if (newFilter) {
+      setTimeout(() => {
+        const appointmentsSection = document.querySelector('[data-section="appointments"]') as HTMLElement | null;
+        if (appointmentsSection) {
+          const rect = appointmentsSection.getBoundingClientRect();
+          const y = rect.top + window.scrollY - 112; // offset for header
+          window.scrollTo({ top: y, behavior: 'smooth' });
+        }
+      }, 180);
+    }
+    
+    // no popup notification; UI provides scroll and highlight feedback
+    // Briefly highlight the table to draw attention
+    setHighlightTable(true);
+    setTimeout(() => setHighlightTable(false), 1000);
+  };
+
+  const handleTimePeriodChange = async (newPeriod: "today" | "week" | "month" | "quarter" | "year" | "all-time") => {
+    setTimePeriod(newPeriod);
+    if (practice?.$id) {
+      try {
+        // No need to refetch stat cards here; analytics uses this period
+      } catch (error) {
+        console.error("Error fetching period counts:", error);
+      }
+    }
+  };
+
+  const handleCardsPeriodChange = async (newPeriod: "today" | "week" | "month" | "quarter" | "year" | "all-time") => {
+    setCardsPeriod(newPeriod);
+    if (practice?.$id) {
+      try {
+        const counts = await getAppointmentCountsByPeriod(practice.$id, newPeriod);
+        setAppointmentCounts(counts);
+      } catch (error) {
+        console.error("Error fetching stat card counts:", error);
+      }
+    }
   };
 
   const toggleSection = (section: "analytics" | "appointments") => {
@@ -204,6 +324,47 @@ const Admin = () => {
     };
   };
 
+  // Click-away: clear stat card filter when clicking outside the stat cards section
+  useEffect(() => {
+    function handleClickAwayCore(target: EventTarget | null) {
+      if (!statusFilter) return;
+      const container = statCardsSectionRef.current;
+      if (container && target instanceof Node && !container.contains(target)) {
+        // Check if the click is on the filter button or within the appointments section
+        const filterButton = document.querySelector('[aria-label="Clear status filter"]');
+        const appointmentsSection = document.querySelector('[data-section="appointments"]');
+        
+        // Don't trigger scroll back if clicking on the filter button or within appointments section
+        if (filterButton && (filterButton === target || filterButton.contains(target as Node))) {
+          return;
+        }
+        if (appointmentsSection && appointmentsSection.contains(target as Node)) {
+          return;
+        }
+        
+        setStatusFilter("");
+        setViewMode("all");
+        setTimeout(() => {
+          if (statCardsSectionRef.current) {
+            const rect = statCardsSectionRef.current.getBoundingClientRect();
+            const y = rect.top + window.scrollY - 112; // offset for header
+            window.scrollTo({ top: y, behavior: "smooth" });
+          }
+        }, 150);
+      }
+    }
+
+    const onPointerDownCapture = (e: Event) => handleClickAwayCore(e.target);
+    const onClick = (e: Event) => handleClickAwayCore(e.target);
+
+    document.addEventListener("pointerdown", onPointerDownCapture, true);
+    document.addEventListener("click", onClick);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDownCapture, true);
+      document.removeEventListener("click", onClick);
+    };
+  }, [statusFilter]);
+
   return (
     <div className="mx-auto flex max-w-7xl flex-col space-y-14">
       <header className="admin-header">
@@ -215,6 +376,8 @@ const Admin = () => {
         <p className="text-16-semibold">Admin Dashboard</p>
       </header>
       <main className="admin-main">
+        {/* Notification removed as UI is now self-explanatory */}
+        
         <section className="w-full space-y-4">
           <div className="flex justify-between items-center">
             <h1 className="header">Welcome 👋 </h1>
@@ -330,66 +493,65 @@ const Admin = () => {
           </p>
         </section>
 
-        <section className="admin-stat">
-          <div
-            onClick={() => handleStatusFilter("scheduled")}
-            className={`cursor-pointer transition-all duration-200 transform hover:scale-105 ${
-              statusFilter === "scheduled"
-                ? "ring-2 ring-blue-500 ring-opacity-50"
-                : ""
-            }`}
-          >
-            <StatCard
-              type="appointments"
-              count={appointmentCounts.scheduledCount}
-              label="Scheduled appointments"
-              icon="/assets/icons/appointments.svg"
-            />
+        <section className="w-full space-y-4 scroll-mt-28" ref={statCardsSectionRef}>
+          <div className="text-center">
+            <div className="text-sm text-gray-300">{getRangeLabel(cardsPeriod)}</div>
+            <div className="mt-3 flex justify-center gap-2">
+              {(["today","week","month","quarter","year","all-time"] as const).map((p) => (
+                <button
+                  key={`cards-${p}`}
+                  onClick={() => handleCardsPeriodChange(p)}
+                  className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                    cardsPeriod === p ? "bg-blue-600 text-white" : "bg-dark-300 text-gray-200 hover:bg-dark-400"
+                  }`}
+                >
+                  {p === "today" ? "Today" : p === "week" ? "Week" : p === "month" ? "Month" : p === "quarter" ? "Quarter" : p === "year" ? "Year" : "All Time"}
+                </button>
+              ))}
+            </div>
+            <p className="mt-5 text-xs text-gray-400">Click stat card to filter table</p>
           </div>
-          <div
-            onClick={() => handleStatusFilter("pending")}
-            className={`cursor-pointer transition-all duration-200 transform hover:scale-105 ${
-              statusFilter === "pending"
-                ? "ring-2 ring-blue-500 ring-opacity-50"
-                : ""
-            }`}
-          >
-            <StatCard
-              type="pending"
-              count={appointmentCounts.pendingCount}
-              label="Pending appointments"
-              icon="/assets/icons/pending.svg"
+          <div className="admin-stat">
+            <div onClick={() => handleStatusFilter("scheduled")}>
+              <StatCard
+                type="appointments"
+                count={appointmentCounts.scheduledCount}
+                label="Scheduled appointments"
+                icon="/assets/icons/appointments.svg"
+                isSelected={statusFilter === "scheduled"}
+                isClickable={true}
+              />
+            </div>
+            <div onClick={() => handleStatusFilter("pending")}>
+              <StatCard
+                type="pending"
+                count={appointmentCounts.pendingCount}
+                label="Pending appointments"
+                icon="/assets/icons/pending.svg"
+                isSelected={statusFilter === "pending"}
+                isClickable={true}
             />
-          </div>
-          <div
-            onClick={() => handleStatusFilter("completed")}
-            className={`cursor-pointer transition-all duration-200 transform hover:scale-105 ${
-              statusFilter === "completed"
-                ? "ring-2 ring-blue-500 ring-opacity-50"
-                : ""
-            }`}
-          >
-            <StatCard
-              type="appointments"
-              count={appointmentCounts.completedCount}
-              label="Completed appointments"
-              icon="/assets/icons/check.svg"
-            />
-          </div>
-          <div
-            onClick={() => handleStatusFilter("cancelled")}
-            className={`cursor-pointer transition-all duration-200 transform hover:scale-105 ${
-              statusFilter === "cancelled"
-                ? "ring-2 ring-blue-500 ring-opacity-50"
-                : ""
-            }`}
-          >
-            <StatCard
-              type="cancelled"
-              count={appointmentCounts.cancelledCount}
-              label="Cancelled appointments"
-              icon="/assets/icons/cancelled.svg"
-            />
+            </div>
+            <div onClick={() => handleStatusFilter("completed")}>
+              <StatCard
+                type="appointments"
+                count={appointmentCounts.completedCount}
+                label="Completed appointments"
+                icon="/assets/icons/check.svg"
+                isSelected={statusFilter === "completed"}
+                isClickable={true}
+              />
+            </div>
+            <div onClick={() => handleStatusFilter("cancelled")}>
+              <StatCard
+                type="cancelled"
+                count={appointmentCounts.cancelledCount}
+                label="Cancelled appointments"
+                icon="/assets/icons/cancelled.svg"
+                isSelected={statusFilter === "cancelled"}
+                isClickable={true}
+              />
+            </div>
           </div>
         </section>
 
@@ -399,7 +561,22 @@ const Admin = () => {
             isCollapsed={collapsedSections.analytics}
             onToggle={() => toggleSection("analytics")}
           >
-            <AppointmentAnalytics practiceId={practice.$id} />
+            <div className="mb-1 text-xs text-gray-400">{getRangeLabel(timePeriod)}</div>
+            {/* Analytics period selector */}
+            <div className="mb-4 flex flex-wrap gap-2">
+              {(["today","week","month","quarter","year","all-time"] as const).map((p) => (
+                <button
+                  key={`analytics-${p}`}
+                  onClick={() => handleTimePeriodChange(p)}
+                  className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                    timePeriod === p ? "bg-dark-500 text-white" : "bg-dark-300 text-gray-200 hover:bg-dark-400"
+                  }`}
+                >
+                  {p === "today" ? "Today" : p === "week" ? "Week" : p === "month" ? "Month" : p === "quarter" ? "Quarter" : p === "year" ? "Year" : "All Time"}
+                </button>
+              ))}
+            </div>
+            <AppointmentAnalytics practiceId={practice.$id} timePeriod={timePeriod} />
           </CollapsibleSection>
         )}
 
@@ -407,6 +584,8 @@ const Admin = () => {
           title="Appointments"
           isCollapsed={collapsedSections.appointments}
           onToggle={() => toggleSection("appointments")}
+          data-section="appointments"
+          className="scroll-mt-28"
         >
           {/* Filters bar */}
           <div className="flex flex-wrap items-center justify-between gap-3 my-6 p-4 bg-dark-400 rounded-lg">
@@ -563,10 +742,12 @@ const Admin = () => {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
             </div>
           ) : (
-            <DataTable
-              columns={columns}
-              data={getFilteredAppointments()?.documents || []}
-            />
+            <div className={`rounded-lg transition-shadow ${highlightTable ? "ring-2 ring-blue-400/60" : ""}`}>
+              <DataTable
+                columns={columns}
+                data={getFilteredAppointments()?.documents || []}
+              />
+            </div>
           )}
 
           {/* Pagination Info */}

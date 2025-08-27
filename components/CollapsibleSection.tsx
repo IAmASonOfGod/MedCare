@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 
-interface CollapsibleSectionProps {
+interface CollapsibleSectionProps extends React.HTMLAttributes<HTMLElement> {
   title: string;
   children: React.ReactNode;
   isCollapsed: boolean;
@@ -16,9 +16,10 @@ const CollapsibleSection = ({
   isCollapsed,
   onToggle,
   className = "",
+  ...rest
 }: CollapsibleSectionProps) => {
   return (
-    <section className={`w-full ${className}`}>
+    <section className={`w-full ${className}`} {...rest}>
       {/* Section Content or Expand Button */}
       {isCollapsed ? (
         <button

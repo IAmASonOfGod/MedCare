@@ -327,6 +327,94 @@ export const getAppointmentCounts = async (practiceId?: string) => {
   }
 };
 
+export const getAppointmentCountsByPeriod = async (
+  practiceId: string,
+  period: "today" | "week" | "month" | "quarter" | "year" | "all-time"
+) => {
+  try {
+    const now = new Date();
+    let startDate: Date;
+    let endDate: Date;
+
+    switch (period) {
+      case "today":
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+        break;
+      case "week":
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        endDate = new Date(now.getTime() + 6 * 24 * 60 * 60 * 1000);
+        endDate.setHours(23, 59, 59, 999);
+        break;
+      case "month":
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+        break;
+      case "quarter":
+        {
+          const currentQuarter = Math.floor(now.getMonth() / 3);
+          startDate = new Date(now.getFullYear(), currentQuarter * 3, 1);
+          endDate = new Date(now.getFullYear(), currentQuarter * 3 + 3, 0, 23, 59, 59, 999);
+        }
+        break;
+      case "year":
+        startDate = new Date(now.getFullYear(), 0, 1);
+        endDate = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+        break;
+      case "all-time":
+        startDate = new Date(0);
+        endDate = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
+        break;
+      default:
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    }
+
+    console.log("[CountsByPeriod] period:", period, "start:", startDate.toISOString(), "end:", endDate.toISOString());
+
+    const queriesBase = [
+      Query.equal("practiceId", [practiceId]),
+      Query.greaterThanEqual("schedule", startDate.toISOString()),
+      Query.lessThanEqual("schedule", endDate.toISOString()),
+    ];
+
+    const all = await databases.listDocuments(
+      DATABASE_ID!,
+      APPOINTMENT_COLLECTION_ID!,
+      queriesBase
+    );
+
+    const docs: any[] = (all as any).documents || [];
+    const statusOf = (s: any) => String((s || "").toString().trim().toLowerCase());
+
+    const counts = {
+      totalCount: all.total,
+      scheduledCount: docs.filter((d) => statusOf(d.status) === "scheduled").length,
+      pendingCount: docs.filter((d) => statusOf(d.status) === "pending").length,
+      cancelledCount: docs.filter((d) => statusOf(d.status) === "cancelled").length,
+      completedCount: docs.filter((d) => statusOf(d.status) === "completed").length,
+      noShowCount: docs.filter((d) => statusOf(d.status) === "no-show" || statusOf(d.status) === "no show").length,
+      period,
+    };
+
+    console.log("[CountsByPeriod] sample statuses:", docs.slice(0, 5).map((d) => ({ id: d.$id, status: d.status, schedule: d.schedule })));
+    console.log("[CountsByPeriod] derived totals:", counts);
+
+    return counts;
+  } catch (error) {
+    console.error("Error fetching counts by period:", error);
+    return {
+      totalCount: 0,
+      scheduledCount: 0,
+      pendingCount: 0,
+      cancelledCount: 0,
+      completedCount: 0,
+      noShowCount: 0,
+      period,
+    };
+  }
+};
+
 export const checkPatientExists = async (patientId: string) => {
   try {
     const patient = await databases.getDocument(
@@ -624,7 +712,7 @@ export const getUpcomingAppointments = async (
 // Analytics and reporting functions
 export const getAppointmentAnalytics = async (
   practiceId: string,
-  period: "week" | "month" | "quarter" = "month"
+  period: "today" | "week" | "month" | "quarter" = "today"
 ) => {
   try {
     console.log(
@@ -638,10 +726,15 @@ export const getAppointmentAnalytics = async (
     let endDate: Date;
 
     switch (period) {
+      case "today":
+        // Today only (from start of day to end of day)
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+        break;
       case "week":
-        // Last 7 days + today + next 7 days (2 week window centered on today)
-        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        endDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+        // Next 7 days (today + 6 days ahead)
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        endDate = new Date(now.getTime() + 6 * 24 * 60 * 60 * 1000, 23, 59, 59, 999);
         break;
       case "month":
         // Current month (from 1st to last day of current month)
@@ -655,9 +748,9 @@ export const getAppointmentAnalytics = async (
         endDate = new Date(now.getFullYear(), currentQuarter * 3 + 3, 0, 23, 59, 59, 999);
         break;
       default:
-        // Default to current month
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+        // Default to today
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
     }
 
     console.log(
@@ -750,7 +843,7 @@ export const getAppointmentAnalytics = async (
 // Get capacity utilization based on practice settings for a specific period
 export const getCapacityUtilization = async (
   practiceId: string,
-  period: "week" | "month" | "quarter" = "month"
+  period: "today" | "week" | "month" | "quarter" | "year" | "all-time" = "today"
 ) => {
   try {
     console.log(
@@ -766,10 +859,15 @@ export const getCapacityUtilization = async (
     let endDate: Date;
 
     switch (period) {
+      case "today":
+        // Today only (from start of day to end of day)
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+        break;
       case "week":
-        // Last 7 days + today + next 7 days (2 week window centered on today)
-        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        endDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+        // Next 7 days (today + 6 days ahead)
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        endDate = new Date(now.getTime() + 6 * 24 * 60 * 60 * 1000, 23, 59, 59, 999);
         break;
       case "month":
         // Current month (from 1st to last day of current month)
@@ -782,10 +880,20 @@ export const getCapacityUtilization = async (
         startDate = new Date(now.getFullYear(), currentQuarter * 3, 1);
         endDate = new Date(now.getFullYear(), currentQuarter * 3 + 3, 0, 23, 59, 59, 999);
         break;
+      case "year":
+        // Current year (from January 1st to December 31st)
+        startDate = new Date(now.getFullYear(), 0, 1);
+        endDate = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+        break;
+      case "all-time":
+        // All time (from beginning to far future)
+        startDate = new Date(0);
+        endDate = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
+        break;
       default:
-        // Default to current month
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+        // Default to today
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
     }
 
     console.log("[Capacity] period:", period, "from:", startDate.toISOString(), "to:", endDate.toISOString());

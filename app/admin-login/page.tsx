@@ -13,6 +13,7 @@ import dynamic from "next/dynamic";
 import { usePractice } from "@/components/PracticeContext";
 import { fetchPracticeByAdminEmail } from "@/lib/actions/practice.actions";
 import { Models } from "node-appwrite";
+import PasskeyModal from "@/components/passkeyModal";
 
 const commonPasswords = [
   "123456",
@@ -42,9 +43,7 @@ const AdminLoginSchema = z.object({
     }),
 });
 
-const PasskeyModal = dynamic(() => import("@/components/passkeyModal"), {
-  ssr: false,
-});
+
 
 export default function AdminLoginPage() {
   const [isLoading, setIsLoading] = useState(false);

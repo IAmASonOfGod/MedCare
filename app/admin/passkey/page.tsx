@@ -1,9 +1,5 @@
-import dynamic from "next/dynamic";
 import React from "react";
-
-const PasskeyModal = dynamic(() => import("@/components/passkeyModal"), {
-  ssr: false,
-});
+import PasskeyModal from "@/components/passkeyModal";
 
 export default function AdminPasskeyPage() {
   return <PasskeyModal />;

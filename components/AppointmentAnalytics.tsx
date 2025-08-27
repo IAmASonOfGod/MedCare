@@ -9,12 +9,14 @@ import StatCard from "./StatCard";
 
 interface AppointmentAnalyticsProps {
   practiceId: string;
+  timePeriod: "today" | "week" | "month" | "quarter" | "year" | "all-time";
 }
 
-const AppointmentAnalytics = ({ practiceId }: AppointmentAnalyticsProps) => {
+type PeriodType = "today" | "week" | "month" | "quarter";
+
+const AppointmentAnalytics = ({ practiceId, timePeriod }: AppointmentAnalyticsProps) => {
   const [analytics, setAnalytics] = useState<any>(null);
   const [capacity, setCapacity] = useState<any>(null);
-  const [period, setPeriod] = useState<"week" | "month" | "quarter">("month");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,7 +31,7 @@ const AppointmentAnalytics = ({ practiceId }: AppointmentAnalyticsProps) => {
       "Fetching analytics for practice:",
       practiceId,
       "period:",
-      period,
+      timePeriod,
       "showLoading:",
       showLoading
     );
@@ -40,8 +42,8 @@ const AppointmentAnalytics = ({ practiceId }: AppointmentAnalyticsProps) => {
     try {
       console.log("Calling analytics functions...");
       const [analyticsData, capacityData] = await Promise.all([
-        getAppointmentAnalytics(practiceId, period),
-        getCapacityUtilization(practiceId, period),
+        getAppointmentAnalytics(practiceId, timePeriod),
+        getCapacityUtilization(practiceId, timePeriod),
       ]);
       console.log("Analytics data received:", analyticsData);
       console.log("Capacity data received:", capacityData);
@@ -62,7 +64,7 @@ const AppointmentAnalytics = ({ practiceId }: AppointmentAnalyticsProps) => {
 
   useEffect(() => {
     fetchAnalytics();
-  }, [practiceId, period]);
+  }, [practiceId, timePeriod]);
 
   // Auto-refresh every 30 seconds in background (no loading state)
   useEffect(() => {
@@ -74,7 +76,7 @@ const AppointmentAnalytics = ({ practiceId }: AppointmentAnalyticsProps) => {
     }, 30000); // Refresh every 30 seconds
 
     return () => clearInterval(interval);
-  }, [practiceId, period]);
+  }, [practiceId, timePeriod]);
 
   // Manual refresh via custom events and midnight rollover
   useEffect(() => {
@@ -107,7 +109,7 @@ const AppointmentAnalytics = ({ practiceId }: AppointmentAnalyticsProps) => {
         clearTimeout(timer);
       };
     }
-  }, [practiceId, period]);
+  }, [practiceId, timePeriod]);
 
   if (isLoading) {
     return (
@@ -136,44 +138,36 @@ const AppointmentAnalytics = ({ practiceId }: AppointmentAnalyticsProps) => {
 
   if (!analytics || !capacity) return null;
 
+  const periodLabel = timePeriod === "today"
+    ? "Today's"
+    : timePeriod === "week"
+    ? "Weekly"
+    : timePeriod === "month"
+    ? "Monthly"
+    : timePeriod === "quarter"
+    ? "Quarterly"
+    : timePeriod === "year"
+    ? "Yearly"
+    : "All-time";
+
+  const periodDesc = timePeriod === "today"
+    ? "Capacity for today only"
+    : timePeriod === "week"
+    ? "Capacity for the next 7 days (today + 6 days ahead)"
+    : timePeriod === "month"
+    ? "Capacity for the entire current month"
+    : timePeriod === "quarter"
+    ? "Capacity for the entire current quarter"
+    : timePeriod === "year"
+    ? "Capacity for the entire current year"
+    : "Capacity across all time";
+
   return (
     <div className="space-y-6">
       {/* Header: Period + Refresh */}
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <h2 className="text-24-bold text-white">Analytics</h2>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setPeriod("week")}
-              className={`px-3 py-1 rounded text-sm font-medium ${
-                period === "week"
-                  ? "bg-dark-500 text-white"
-                  : "bg-dark-300 text-gray-200 hover:bg-dark-400"
-              }`}
-            >
-              Week
-            </button>
-            <button
-              onClick={() => setPeriod("month")}
-              className={`px-3 py-1 rounded text-sm font-medium ${
-                period === "month"
-                  ? "bg-dark-500 text-white"
-                  : "bg-dark-300 text-gray-200 hover:bg-dark-400"
-              }`}
-            >
-              Month
-            </button>
-            <button
-              onClick={() => setPeriod("quarter")}
-              className={`px-3 py-1 rounded text-sm font-medium ${
-                period === "quarter"
-                  ? "bg-dark-500 text-white"
-                  : "bg-dark-300 text-gray-200 hover:bg-dark-400"
-              }`}
-            >
-              Quarter
-            </button>
-          </div>
         </div>
         <button
           onClick={() => fetchAnalytics(true)}
@@ -365,23 +359,26 @@ const AppointmentAnalytics = ({ practiceId }: AppointmentAnalyticsProps) => {
 
         <div className="bg-dark-400 rounded-lg p-6 shadow-sm">
           <h3 className="text-lg font-semibold mb-4 text-white">
-            Today's Capacity
+            {periodLabel} Capacity
           </h3>
+          <p className="text-sm text-gray-300 mb-4">
+            {periodDesc}
+          </p>
           <div className="space-y-3">
             <div className="flex justify-between items-center">
-              <span className="text-white">Total Slots</span>
+              <span className="text-white">Total {periodLabel} Slots</span>
               <span className="font-semibold text-white">
                 {capacity.totalCapacity}
               </span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-white">Booked Slots</span>
+              <span className="text-white">Booked {periodLabel} Slots</span>
               <span className="font-semibold text-white">
                 {capacity.bookedSlots}
               </span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-white">Available Slots</span>
+              <span className="text-white">Available {periodLabel} Slots</span>
               <span className="font-semibold text-white">
                 {capacity.availableSlots}
               </span>
@@ -392,6 +389,9 @@ const AppointmentAnalytics = ({ practiceId }: AppointmentAnalyticsProps) => {
                 style={{ width: String(capacity.utilizationRate) + "%" }}
               ></div>
             </div>
+            <p className="text-xs text-gray-400 mt-2 text-center">
+              {capacity.utilizationRate}% of {periodLabel.toLowerCase()} capacity utilized
+            </p>
           </div>
         </div>
       </div>

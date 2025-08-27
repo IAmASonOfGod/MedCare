@@ -7,18 +7,17 @@ const nextConfig = {
   },
   eslint: {
     ignoreDuringBuilds: true,
-  }, // Ignore ESLint errors during build}
+  }, // Ignore ESLint errors during build
+  webpack(config, { isServer }) {
+    if (!isServer) {
+      config.resolve.extensions.push(".ts", ".tsx");
+    }
+    return config;
+  },
 };
 
 export default withSentryConfig(
-  {
-    webpack(config, { isServer }) {
-      if (!isServer) {
-        config.resolve.extensions.push(".ts", ".tsx");
-      }
-      return config;
-    },
-  },
+  nextConfig,
   {
     // For all available options, see:
     // https://www.npmjs.com/package/@sentry/webpack-plugin#options

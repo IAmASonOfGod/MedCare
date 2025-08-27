@@ -21,15 +21,17 @@ import {
 import { usePathname, useRouter } from "next/navigation";
 import { decryptKey, encryptKey } from "@/lib/utils";
 
-const passkeyModal = () => {
+export default function PasskeyModal() {
   const router = useRouter();
   const path = usePathname();
   const [open, setOpen] = useState(true);
   const [passkey, setPasskey] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    setIsMounted(true);
     setOpen(true); // Always show the modal when the component mounts
   }, []);
 
@@ -72,6 +74,10 @@ const passkeyModal = () => {
   const closeModal = () => {
     setOpen(false); // Just close the modal, no redirect
   };
+
+  if (!isMounted) {
+    return null;
+  }
 
   return (
     <>
@@ -137,6 +143,4 @@ const passkeyModal = () => {
       )}
     </>
   );
-};
-
-export default passkeyModal;
+}
