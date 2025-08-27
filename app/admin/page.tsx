@@ -330,15 +330,11 @@ const Admin = () => {
       if (!statusFilter) return;
       const container = statCardsSectionRef.current;
       if (container && target instanceof Node && !container.contains(target)) {
-        // Check if the click is on the filter button or within the appointments section
+        // Check if the click is specifically on the filter button
         const filterButton = document.querySelector('[aria-label="Clear status filter"]');
-        const appointmentsSection = document.querySelector('[data-section="appointments"]');
         
-        // Don't trigger scroll back if clicking on the filter button or within appointments section
+        // Don't trigger scroll back if clicking specifically on the filter button
         if (filterButton && (filterButton === target || filterButton.contains(target as Node))) {
-          return;
-        }
-        if (appointmentsSection && appointmentsSection.contains(target as Node)) {
           return;
         }
         
