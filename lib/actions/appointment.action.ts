@@ -712,7 +712,7 @@ export const getUpcomingAppointments = async (
 // Analytics and reporting functions
 export const getAppointmentAnalytics = async (
   practiceId: string,
-  period: "today" | "week" | "month" | "quarter" = "today"
+  period: "today" | "week" | "month" | "quarter" | "year" | "all-time" = "today"
 ) => {
   try {
     console.log(
@@ -747,6 +747,16 @@ export const getAppointmentAnalytics = async (
         const currentQuarter = Math.floor(now.getMonth() / 3);
         startDate = new Date(now.getFullYear(), currentQuarter * 3, 1);
         endDate = new Date(now.getFullYear(), currentQuarter * 3 + 3, 0, 23, 59, 59, 999);
+        break;
+      case "year":
+        // Current year (from January 1st to December 31st)
+        startDate = new Date(now.getFullYear(), 0, 1);
+        endDate = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+        break;
+      case "all-time":
+        // All time (from beginning to far future)
+        startDate = new Date(0);
+        endDate = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
         break;
       default:
         // Default to today
