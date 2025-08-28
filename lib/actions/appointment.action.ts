@@ -732,9 +732,10 @@ export const getAppointmentAnalytics = async (
         endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
         break;
       case "week":
-        // Next 7 days (today + 6 days ahead)
+        // Next 7 days (today + 6 days ahead) - correct end-of-day construction
         startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        endDate = new Date(now.getTime() + 6 * 24 * 60 * 60 * 1000, 23, 59, 59, 999);
+        endDate = new Date(now.getTime() + 6 * 24 * 60 * 60 * 1000);
+        endDate.setHours(23, 59, 59, 999);
         break;
       case "month":
         // Current month (from 1st to last day of current month)
@@ -867,7 +868,8 @@ export const getCapacityUtilization = async (
       case "week":
         // Next 7 days (today + 6 days ahead)
         startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        endDate = new Date(now.getTime() + 6 * 24 * 60 * 60 * 1000, 23, 59, 59, 999);
+        endDate = new Date(now.getTime() + 6 * 24 * 60 * 60 * 1000);
+        endDate.setHours(23, 59, 59, 999);
         break;
       case "month":
         // Current month (from 1st to last day of current month)
@@ -930,6 +932,35 @@ export const getCapacityUtilization = async (
         bookedSlots: 0,
         availableSlots: 0,
         utilizationRate: 0,
+        error:
+          "Practice settings not configured. Please set up business hours and consultation intervals.",
+        needsConfiguration: true,
+      };
+    }
+
+    // Ensure at least one day has valid business hours (open+close set and not closed)
+    const dayConfigs = [
+      { open: settings.sundayOpen, close: settings.sundayClose, closed: settings.sundayClosed },   // 0
+      { open: settings.mondayOpen, close: settings.mondayClose, closed: settings.mondayClosed },   // 1
+      { open: settings.tuesdayOpen, close: settings.tuesdayClose, closed: settings.tuesdayClosed },// 2
+      { open: settings.wednesdayOpen, close: settings.wednesdayClose, closed: settings.wednesdayClosed },// 3
+      { open: settings.thursdayOpen, close: settings.thursdayClose, closed: settings.thursdayClosed },// 4
+      { open: settings.fridayOpen, close: settings.fridayClose, closed: settings.fridayClosed },   // 5
+      { open: settings.saturdayOpen, close: settings.saturdayClose, closed: settings.saturdayClosed },// 6
+    ];
+    const hasAnyBusinessHours = dayConfigs.some((d) => !d?.closed && !!d?.open && !!d?.close);
+
+    if (!hasAnyBusinessHours) {
+      console.warn("[Capacity] No business hours configured");
+      return {
+        period,
+        totalCapacity: 0,
+        bookedSlots: 0,
+        availableSlots: 0,
+        utilizationRate: 0,
+        error:
+          "No business days configured. Please set opening and closing times for at least some days.",
+        needsConfiguration: true,
       };
     }
 
@@ -1010,6 +1041,7 @@ export const getCapacityUtilization = async (
       bookedSlots,
       availableSlots,
       utilizationRate,
+      needsConfiguration: false,
     };
 
     console.log("Capacity utilization result:", result);
@@ -1023,6 +1055,8 @@ export const getCapacityUtilization = async (
       bookedSlots: 0,
       availableSlots: 0,
       utilizationRate: 0,
+      error: "Error calculating capacity. Please check practice settings.",
+      needsConfiguration: true
     };
   }
 };

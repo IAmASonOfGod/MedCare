@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
@@ -77,7 +78,10 @@ const PracticeSettingsModal: React.FC<PracticeSettingsModalProps> = ({
 }) => {
   const [isInitializing, setIsInitializing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [authError, setAuthError] = useState(false);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const router = useRouter();
 
   const form = useForm<z.infer<typeof PracticeSettingsSchema>>({
     resolver: zodResolver(PracticeSettingsSchema) as any,
@@ -121,6 +125,9 @@ const PracticeSettingsModal: React.FC<PracticeSettingsModalProps> = ({
   });
 
   useEffect(() => {
+    // Clear any previous errors whenever the modal is opened/closed
+    setSubmitError(null);
+    setAuthError(false);
     if (!open || !practiceId) return;
     (async () => {
       try {
@@ -173,6 +180,15 @@ const PracticeSettingsModal: React.FC<PracticeSettingsModalProps> = ({
         }
       } catch (e) {
         console.error("Error loading practice settings:", e);
+        const raw = (e as any)?.message || "Unable to load practice settings.";
+        if (/forbidden/i.test(raw)) {
+          setAuthError(true);
+          setSubmitError(
+            "You're not authorized to view/update this practice. Please log in as the correct admin."
+          );
+        } else {
+          setSubmitError(raw);
+        }
       } finally {
         setIsInitializing(false);
       }
@@ -191,6 +207,11 @@ const PracticeSettingsModal: React.FC<PracticeSettingsModalProps> = ({
 
   const onSubmit = async (data: z.infer<typeof PracticeSettingsSchema>) => {
     try {
+      setSubmitError(null);
+      if (!practiceId) {
+        setSubmitError("No practice is selected. Please select a practice and try again.");
+        return;
+      }
       setIsSaving(true);
       const payload: Partial<PracticeSettings> = {
         consultationInterval: Number(data.consultationInterval),
@@ -231,9 +252,18 @@ const PracticeSettingsModal: React.FC<PracticeSettingsModalProps> = ({
         window.dispatchEvent(new CustomEvent("practice-settings:saved"));
       }
 
+      // Clear any previous error and close
+      setSubmitError(null);
       onOpenChange(false);
     } catch (e) {
       console.error("Error saving practice settings:", e);
+      const raw = (e as any)?.message || "Failed to save practice settings. Please try again.";
+      const isForbidden = /forbidden/i.test(raw);
+      const message = isForbidden
+        ? "You're not authorized to update this practice. Please log in as the correct admin for this practice."
+        : raw;
+      setAuthError(isForbidden);
+      setSubmitError(message);
     } finally {
       setIsSaving(false);
     }
@@ -252,6 +282,30 @@ const PracticeSettingsModal: React.FC<PracticeSettingsModalProps> = ({
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            {submitError && (
+              <div className="bg-red-900/20 border border-red-800 text-red-200 px-4 py-3 rounded">
+                <p className="text-sm" aria-live="polite">{submitError}</p>
+                {authError && (
+                  <div className="mt-2">
+                    <Button
+                      type="button"
+                      className="bg-red-600 hover:bg-red-700 text-white"
+                      onClick={() => {
+                        try {
+                          if (typeof window !== "undefined") {
+                            localStorage.removeItem("adminReady");
+                          }
+                        } catch {}
+                        onOpenChange(false);
+                        router.push("/admin-login");
+                      }}
+                    >
+                      Re-authenticate
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-white">
                 Booking Settings
@@ -346,7 +400,7 @@ const PracticeSettingsModal: React.FC<PracticeSettingsModalProps> = ({
               </Button>
               <Button
                 type="submit"
-                disabled={isInitializing || isSaving}
+                disabled={isInitializing || isSaving || authError}
                 className="bg-dark-400 hover:bg-dark-500 text-white border border-gray-700"
               >
                 {isSaving
