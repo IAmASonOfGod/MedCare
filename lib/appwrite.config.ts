@@ -73,3 +73,10 @@ export const users = new sdk.Users(client);
 export const ADMINS_COLLECTION_ID = process.env.ADMINS_COLLECTION_ID;
 export const ADMIN_INVITES_COLLECTION_ID =
   process.env.ADMIN_INVITES_COLLECTION_ID;
+export const ADMIN_PASSWORD_RESETS_COLLECTION_ID =
+  process.env.ADMIN_PASSWORD_RESETS_COLLECTION_ID;
+
+// Optional collections for billing/usage
+export const WALLETS_COLLECTION_ID = process.env.WALLETS_COLLECTION_ID;
+export const WALLET_TRANSACTIONS_COLLECTION_ID =
+  process.env.WALLET_TRANSACTIONS_COLLECTION_ID;

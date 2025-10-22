@@ -63,13 +63,7 @@ export default function AdminLoginPage() {
     await fetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email: data.email,
-        password: data.password,
-        // TODO: replace with real IDs after lookup
-        adminId: data.email,
-        practiceId: practice?.$id || "practice-unknown",
-      }),
+      body: JSON.stringify({ email: data.email, password: data.password }),
     });
 
     // 2. Fetch the practice by admin email and set the practice name BEFORE showing the modal
@@ -136,7 +130,7 @@ export default function AdminLoginPage() {
               inputMode="text"
             />
             <div className="flex justify-between items-center">
-              <Link href="#" className="text-blue-600 hover:underline text-sm">
+              <Link href="/admin/forgot-password" className="text-blue-600 hover:underline text-sm">
                 Forgot password?
               </Link>
             </div>

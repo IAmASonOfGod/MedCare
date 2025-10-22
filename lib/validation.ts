@@ -152,6 +152,7 @@ export const PracticeRegistrationSchema = z.object({
   ),
   specialistType: z.string().optional(),
   slug: z.string().optional(), // Auto-generated
+  verificationStatus: z.enum(["pending", "verified", "rejected"]).default("pending"),
   registrationNumber: z
     .string()
     .min(2, "Registration number must be at least 2 characters")

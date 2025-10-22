@@ -42,6 +42,7 @@ export async function createPractice(practice: Record<string, any>) {
       ID.unique(),
       {
         ...practice,
+        verificationStatus: "pending", // Default to pending verification
         consultationInterval:
           practice.consultationInterval != null
             ? Number(practice.consultationInterval)
@@ -374,3 +375,74 @@ export const getBusinessHoursForDay = (
 
   return { startHour, startMinute, endHour, endMinute };
 };
+
+// Practice verification actions
+export async function fetchPendingPractices() {
+  try {
+    const result = await databases.listDocuments(
+      validatedDatabaseId,
+      validatedPracticesCollectionId,
+      [Query.equal("verificationStatus", ["pending"])]
+    );
+    return result.documents;
+  } catch (error) {
+    console.error("Error fetching pending practices:", error);
+    throw error;
+  }
+}
+
+export async function fetchAllPractices() {
+  try {
+    const result = await databases.listDocuments(
+      validatedDatabaseId,
+      validatedPracticesCollectionId,
+      [Query.orderDesc("$createdAt")]
+    );
+    return result.documents;
+  } catch (error) {
+    console.error("Error fetching all practices:", error);
+    throw error;
+  }
+}
+
+export async function updatePracticeVerificationStatus(
+  practiceId: string,
+  status: "pending" | "verified" | "rejected",
+  verifiedBy?: string
+) {
+  try {
+    const updateData: any = {
+      verificationStatus: status,
+      verifiedAt: new Date().toISOString(),
+    };
+    
+    if (verifiedBy) {
+      updateData.verifiedBy = verifiedBy;
+    }
+
+    const result = await databases.updateDocument(
+      validatedDatabaseId,
+      validatedPracticesCollectionId,
+      practiceId,
+      updateData
+    );
+    return result;
+  } catch (error) {
+    console.error("Error updating practice verification status:", error);
+    throw error;
+  }
+}
+
+export async function getPracticeById(practiceId: string) {
+  try {
+    const result = await databases.getDocument(
+      validatedDatabaseId,
+      validatedPracticesCollectionId,
+      practiceId
+    );
+    return result;
+  } catch (error) {
+    console.error("Error fetching practice by ID:", error);
+    throw error;
+  }
+}
