@@ -10,6 +10,13 @@ export interface AdminClaims {
   exp?: number;
 }
 
+export interface SuperAdminClaims {
+  superAdminId: string;
+  role: "super-admin";
+  iat?: number;
+  exp?: number;
+}
+
 export async function verifyToken(token: string): Promise<AdminClaims> {
   const secret = process.env.JWT_SECRET;
   if (!secret) throw new Error("JWT_SECRET env var is not set");

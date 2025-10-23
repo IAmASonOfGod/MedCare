@@ -4,6 +4,10 @@ import {
   markInviteUsed,
   validateInviteToken,
 } from "@/lib/actions/admin.actions";
+import {
+  validateSuperAdminInviteToken,
+  markSuperAdminInviteUsed,
+} from "@/lib/actions/superAdmin.actions";
 import { signToken } from "@/lib/auth/jwt";
 
 export async function POST(req: Request) {
@@ -11,7 +15,17 @@ export async function POST(req: Request) {
     const { token, password, recoveryEmail } = await req.json();
     if (!token || !password || !recoveryEmail)
       return NextResponse.json({ error: "Missing fields" }, { status: 400 });
-    const invite = await validateInviteToken(token);
+
+    // Try to validate as super-admin invite first
+    let invite = await validateSuperAdminInviteToken(token);
+    let isSuperAdminInvite = true;
+
+    if (!invite) {
+      // Fallback to regular admin invite
+      invite = await validateInviteToken(token);
+      isSuperAdminInvite = false;
+    }
+
     if (!invite)
       return NextResponse.json(
         { error: "Invalid or expired invite" },
@@ -25,7 +39,12 @@ export async function POST(req: Request) {
       practiceId: invite.practiceId,
     });
 
-    await markInviteUsed(invite.$id, admin.$id);
+    // Mark the appropriate invite as used
+    if (isSuperAdminInvite) {
+      await markSuperAdminInviteUsed(invite.$id, admin.$id);
+    } else {
+      await markInviteUsed(invite.$id, admin.$id);
+    }
 
     const jwt = await signToken(
       { adminId: admin.$id, practiceId: invite.practiceId, role: "admin" },

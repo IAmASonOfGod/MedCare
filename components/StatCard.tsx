@@ -7,12 +7,13 @@ interface StatCardProps {
   count: number;
   label: string;
   icon: string;
+  isLoading?: boolean;
   isSelected?: boolean;
   isClickable?: boolean;
   isClicked?: boolean;
 }
 
-const StatCard = ({ count = 0, label, icon, type, isSelected = false, isClickable = false, isClicked = false }: StatCardProps) => {
+const StatCard = ({ count = 0, label, icon, type, isLoading = false, isSelected = false, isClickable = false, isClicked = false }: StatCardProps) => {
   return (
     <div
               className={clsx(
@@ -54,7 +55,13 @@ const StatCard = ({ count = 0, label, icon, type, isSelected = false, isClickabl
           alt="label"
           className="size-6 w-fit"
         />
-        <h2 className="text-24-bold stat-card-count">{count}</h2>
+        {isLoading ? (
+          <div className="flex items-center justify-center">
+            <div className="animate-spin rounded-full h-6 w-6 border-2 border-white border-t-transparent"></div>
+          </div>
+        ) : (
+          <h2 className="text-24-bold stat-card-count">{count}</h2>
+        )}
       </div>
       <p className="text-12-regular text-white relative z-10">{label}</p>
       

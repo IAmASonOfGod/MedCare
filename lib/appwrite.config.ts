@@ -24,6 +24,12 @@ const APPOINTMENT_COLLECTION_ID =
 const PRACTICES_COLLECTION_ID =
   process.env.PRACTICES_COLLECTION_ID ||
   (isBuildTime ? "build-time-placeholder" : undefined);
+const ADMINS_COLLECTION_ID =
+  process.env.ADMINS_COLLECTION_ID ||
+  (isBuildTime ? "build-time-placeholder" : undefined);
+const ADMIN_INVITES_COLLECTION_ID =
+  process.env.ADMIN_INVITES_COLLECTION_ID ||
+  (isBuildTime ? "build-time-placeholder" : undefined);
 const BUCKET_ID = process.env.NEXT_PUBLIC_BUCKET_ID;
 const ENDPOINT =
   process.env.NEXT_PUBLIC_ENDPOINT ||
@@ -44,6 +50,11 @@ if (!isBuildTime) {
     throw new Error("APPOINTMENT_COLLECTION_ID env var is not set");
   if (!PRACTICES_COLLECTION_ID)
     throw new Error("PRACTICES_COLLECTION_ID env var is not set");
+  // TEMPORARY: Skip validation for testing notifications
+  // if (!ADMINS_COLLECTION_ID)
+  //   throw new Error("ADMINS_COLLECTION_ID env var is not set");
+  // if (!ADMIN_INVITES_COLLECTION_ID)
+  //   throw new Error("ADMIN_INVITES_COLLECTION_ID env var is not set");
   if (!ENDPOINT)
     throw new Error(
       "Appwrite endpoint env var is not set. Expected NEXT_PUBLIC_ENDPOINT or NEXT_PUBLIC_ENDPOINT_ID or APPWRITE_ENDPOINT"
@@ -61,6 +72,8 @@ export {
   PATIENT_COLLECTION_ID,
   APPOINTMENT_COLLECTION_ID,
   PRACTICES_COLLECTION_ID,
+  ADMINS_COLLECTION_ID,
+  ADMIN_INVITES_COLLECTION_ID,
   BUCKET_ID,
   ENDPOINT,
 };
@@ -69,7 +82,3 @@ export const storage = new sdk.Storage(client);
 export const messaging = new sdk.Messaging(client);
 export const users = new sdk.Users(client);
 
-// Optional collections for admin onboarding
-export const ADMINS_COLLECTION_ID = process.env.ADMINS_COLLECTION_ID;
-export const ADMIN_INVITES_COLLECTION_ID =
-  process.env.ADMIN_INVITES_COLLECTION_ID;

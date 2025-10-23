@@ -1,7 +1,7 @@
 "use server";
 
 import { ID, InputFile, Query, Models } from "node-appwrite";
-import { databases } from "@/lib/appwrite.config";
+import { databases, DATABASE_ID, ADMINS_COLLECTION_ID, ADMIN_INVITES_COLLECTION_ID } from "@/lib/appwrite.config";
 import crypto from "crypto";
 import argon2 from "argon2";
 
@@ -26,11 +26,6 @@ interface Admin extends Models.Document {
   createdAt: string;
 }
 
-const DATABASE_ID = process.env.DATABASE_ID as string;
-const ADMINS_COLLECTION_ID = process.env.ADMINS_COLLECTION_ID as string;
-const ADMIN_INVITES_COLLECTION_ID = process.env
-  .ADMIN_INVITES_COLLECTION_ID as string;
-
 function hashToken(token: string) {
   return crypto.createHash("sha256").update(token).digest("hex");
 }
@@ -46,8 +41,8 @@ export async function createAdminInvite(args: {
   const tokenHash = hashToken(token);
   const expiresAt = new Date(Date.now() + ttlHours * 3600 * 1000).toISOString();
   await databases.createDocument(
-    DATABASE_ID,
-    ADMIN_INVITES_COLLECTION_ID,
+    DATABASE_ID!,
+    ADMIN_INVITES_COLLECTION_ID!,
     ID.unique(),
     {
       practiceId,
@@ -66,8 +61,8 @@ export async function validateInviteToken(
 ): Promise<AdminInvite | null> {
   const tokenHash = hashToken(token);
   const res = await databases.listDocuments(
-    DATABASE_ID,
-    ADMIN_INVITES_COLLECTION_ID,
+    DATABASE_ID!,
+    ADMIN_INVITES_COLLECTION_ID!,
     [Query.equal("tokenHash", [tokenHash]), Query.isNull("usedAt")]
   );
   const doc = res.documents[0] as AdminInvite;
@@ -78,8 +73,8 @@ export async function validateInviteToken(
 
 export async function markInviteUsed(inviteId: string, usedBy: string) {
   await databases.updateDocument(
-    DATABASE_ID,
-    ADMIN_INVITES_COLLECTION_ID,
+    DATABASE_ID!,
+    ADMIN_INVITES_COLLECTION_ID!,
     inviteId,
     {
       usedAt: new Date().toISOString(),
@@ -98,8 +93,8 @@ export async function createAdminAccount(args: {
     type: argon2.argon2id,
   });
   const admin = (await databases.createDocument(
-    DATABASE_ID,
-    ADMINS_COLLECTION_ID,
+    DATABASE_ID!,
+    ADMINS_COLLECTION_ID!,
     ID.unique(),
     {
       email: args.email,

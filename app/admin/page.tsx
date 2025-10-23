@@ -35,6 +35,7 @@ const Admin = () => {
     completedCount: 0,
     noShowCount: 0,
   });
+  const [isCountsLoading, setIsCountsLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [viewMode, setViewMode] = useState<"all" | "today" | "upcoming">("all");
@@ -160,10 +161,13 @@ const Admin = () => {
   const fetchCounts = async () => {
     if (!practice?.$id) return;
     try {
+      setIsCountsLoading(true);
       const counts = await getAppointmentCountsByPeriod(practice.$id, cardsPeriod);
       setAppointmentCounts(counts);
     } catch (error) {
       console.error("Error fetching counts:", error);
+    } finally {
+      setIsCountsLoading(false);
     }
   };
 
@@ -514,6 +518,7 @@ const Admin = () => {
                 count={appointmentCounts.scheduledCount}
                 label="Scheduled appointments"
                 icon="/assets/icons/appointments.svg"
+                isLoading={isCountsLoading}
                 isSelected={statusFilter === "scheduled"}
                 isClickable={true}
               />
@@ -524,6 +529,7 @@ const Admin = () => {
                 count={appointmentCounts.pendingCount}
                 label="Pending appointments"
                 icon="/assets/icons/pending.svg"
+                isLoading={isCountsLoading}
                 isSelected={statusFilter === "pending"}
                 isClickable={true}
             />
@@ -534,6 +540,7 @@ const Admin = () => {
                 count={appointmentCounts.completedCount}
                 label="Completed appointments"
                 icon="/assets/icons/check.svg"
+                isLoading={isCountsLoading}
                 isSelected={statusFilter === "completed"}
                 isClickable={true}
               />
@@ -544,6 +551,7 @@ const Admin = () => {
                 count={appointmentCounts.cancelledCount}
                 label="Cancelled appointments"
                 icon="/assets/icons/cancelled.svg"
+                isLoading={isCountsLoading}
                 isSelected={statusFilter === "cancelled"}
                 isClickable={true}
               />

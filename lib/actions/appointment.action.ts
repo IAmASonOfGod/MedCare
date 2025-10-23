@@ -16,8 +16,7 @@ import {
   getPracticeSettings,
   getBusinessHoursForDay,
 } from "./practice.actions";
-import { sendAppointmentEmail } from "@/lib/notifications/email";
-import { sendSms } from "@/lib/notifications/sms";
+// TODO: Import NotificationAPI services
 
 // Patient-initiated appointment creation (no admin auth required)
 export const createPatientAppointment = async (
@@ -55,17 +54,12 @@ export const createPatientAppointment = async (
       );
       const schedule = new Date(appointment.schedule).toLocaleString();
       if ((patient as any)?.email) {
-        await sendAppointmentEmail({
-          to: (patient as any).email,
-          subject: "Your appointment is scheduled",
-          html: `<p>Your appointment is scheduled for ${schedule}.</p>`,
-        });
+        // TODO: Send email using NotificationAPI
+        console.log("Email would be sent to:", (patient as any).email, "Subject: Your appointment is scheduled", "HTML: Your appointment is scheduled for", schedule);
       }
       if ((patient as any)?.phone) {
-        await sendSms(
-          (patient as any).phone,
-          `Appointment scheduled: ${schedule}`
-        );
+        // TODO: Send SMS using NotificationAPI
+        console.log("SMS would be sent to:", (patient as any).phone, "Message: Appointment scheduled:", schedule);
       }
     } catch (_) {}
 
@@ -139,17 +133,12 @@ export const createAppointment = async (
       );
       const schedule = new Date(appointment.schedule).toLocaleString();
       if ((patient as any)?.email) {
-        await sendAppointmentEmail({
-          to: (patient as any).email,
-          subject: "Your appointment is scheduled",
-          html: `<p>Your appointment is scheduled for ${schedule}.</p>`,
-        });
+        // TODO: Send email using NotificationAPI
+        console.log("Email would be sent to:", (patient as any).email, "Subject: Your appointment is scheduled", "HTML: Your appointment is scheduled for", schedule);
       }
       if ((patient as any)?.phone) {
-        await sendSms(
-          (patient as any).phone,
-          `Appointment scheduled: ${schedule}`
-        );
+        // TODO: Send SMS using NotificationAPI
+        console.log("SMS would be sent to:", (patient as any).phone, "Message: Appointment scheduled:", schedule);
       }
     } catch (_) {}
 
@@ -510,17 +499,12 @@ export const updateAppointment = async ({
       const schedule = new Date((updated as any).schedule).toLocaleString();
       const status = (updated as any).status;
       if ((patient as any)?.email) {
-        await sendAppointmentEmail({
-          to: (patient as any).email,
-          subject: `Appointment ${status}`,
-          html: `<p>Your appointment is ${status} for ${schedule}.</p>`,
-        });
+        // TODO: Send email using NotificationAPI
+        console.log("Email would be sent to:", (patient as any).email, "Subject: Appointment", status, "HTML: Your appointment is", status, "for", schedule);
       }
       if ((patient as any)?.phone) {
-        await sendSms(
-          (patient as any).phone,
-          `Appointment ${status}: ${schedule}`
-        );
+        // TODO: Send SMS using NotificationAPI
+        console.log("SMS would be sent to:", (patient as any).phone, "Message: Appointment", status + ":", schedule);
       }
     } catch (_) {}
 
@@ -530,17 +514,14 @@ export const updateAppointment = async ({
   }
 };
 
+// TODO: Implement SMS notification using NotificationAPI
 export const sendSMSNotification = async (userId: string, content: string) => {
   try {
-    const message = await messaging.createSms(
-      ID.unique(),
-      content,
-      [],
-      [userId]
-    );
-    return parseStringify(message);
+    // TODO: Send SMS using NotificationAPI
+    console.log("SMS notification would be sent to user:", userId, "Content:", content);
+    return { success: true, message: "SMS notification placeholder" };
   } catch (error) {
-    console.log(error);
+    console.log("SMS notification error:", error);
   }
 };
 
