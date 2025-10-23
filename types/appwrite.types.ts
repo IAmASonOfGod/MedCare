@@ -49,5 +49,22 @@ export interface Practice extends Models.Document {
   adminEmail: string;
   address: string;
   phone: string;
+  verificationStatus: "pending" | "verified" | "rejected";
   // Add other practice fields as needed
+}
+
+export interface Wallet extends Models.Document {
+  practiceId: string;
+  balanceCents: number;
+  currency: string; // e.g., "ZAR"
+  status: "active" | "suspended";
+}
+
+export interface WalletTransaction extends Models.Document {
+  walletId: string;
+  practiceId: string;
+  type: "credit" | "debit" | "refund";
+  amountCents: number;
+  reason: string;
+  relatedMessageId?: string | null;
 }

@@ -1,22 +1,12 @@
 import { NextResponse } from "next/server";
 import { signToken } from "@/lib/auth/jwt";
+import { findAdminByEmail, verifyAdminPassword } from "@/lib/actions/admin.actions";
 
 export async function POST(req: Request) {
   try {
-    const { email, password, practiceId, adminId } = await req.json();
-
-    // Validate required fields
-    if (!email || !password || !practiceId || !adminId) {
-      console.error("Missing credentials in login request:", {
-        email: !!email,
-        password: !!password,
-        practiceId: !!practiceId,
-        adminId: !!adminId,
-      });
-      return NextResponse.json(
-        { error: "Missing credentials" },
-        { status: 400 }
-      );
+    const { email, password } = await req.json();
+    if (!email || !password) {
+      return NextResponse.json({ error: "Missing credentials" }, { status: 400 });
     }
 
     // Check if JWT_SECRET is available
@@ -28,12 +18,19 @@ export async function POST(req: Request) {
       );
     }
 
-    console.log("Attempting to sign token for admin:", adminId);
+    const admin = await findAdminByEmail(email);
+    if (!admin) {
+      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+    }
+    const ok = await verifyAdminPassword(admin as any, password);
+    if (!ok) {
+      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+    }
+
     const token = await signToken(
-      { adminId, practiceId, role: "admin" },
+      { adminId: (admin as any).$id, practiceId: (admin as any).practiceId, role: (admin as any).role || "admin" },
       60 * 60 * 8
     );
-    console.log("Token signed successfully");
 
     const res = NextResponse.json({ ok: true });
     res.cookies.set("admin_token", token, {

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { updatePracticeVerificationStatus, getPracticeById } from "@/lib/actions/practice.actions";
-import { requireSuperAdmin } from "@/lib/auth/requireSuperAdmin";
+import { requireAdmin } from "@/lib/auth/requireAdmin";
 import { createAdminInvite } from "@/lib/actions/admin.actions";
 import { sendInviteEmail } from "@/lib/notifications/email-service";
 
@@ -9,7 +9,7 @@ export async function POST(
   { params }: { params: { practiceId: string } }
 ) {
   try {
-    const claims = await requireSuperAdmin();
+    const claims = await requireAdmin();
     const { status } = await req.json();
     
     if (!["pending", "verified", "rejected"].includes(status)) {
@@ -23,7 +23,7 @@ export async function POST(
     await updatePracticeVerificationStatus(
       params.practiceId,
       status as "pending" | "verified" | "rejected",
-      claims.superAdminId
+      claims.adminId
     );
     
     // If verified, create and send admin invite
@@ -35,7 +35,7 @@ export async function POST(
           const { token } = await createAdminInvite({
             practiceId: params.practiceId,
             email: (practice as any).contactEmail,
-            createdBy: claims.superAdminId,
+            createdBy: claims.adminId,
             ttlHours: 72, // 3 days
           });
           

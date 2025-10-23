@@ -438,6 +438,7 @@ const Admin = () => {
                   </svg>
                   Practice Settings
                 </DropdownMenuItem>
+
                 <DropdownMenuItem
                   onClick={() => {
                     setIsDropdownOpen(false);

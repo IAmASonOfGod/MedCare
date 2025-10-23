@@ -19,11 +19,8 @@ import {
   Mail,
   MapPin,
   Phone,
-  Building,
-  LogOut,
-  Shield
+  Building
 } from "lucide-react";
-import { useRouter } from "next/navigation";
 
 interface Practice {
   $id: string;
@@ -46,17 +43,16 @@ interface Practice {
   verifiedBy?: string;
 }
 
-const SuperAdminDashboard = () => {
+const PracticeVerificationPage = () => {
   const [practices, setPractices] = useState<Practice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const router = useRouter();
 
   const fetchPractices = async (status?: string) => {
     try {
       setLoading(true);
-      const url = status ? `/api/super-admin/practices?status=${status}` : "/api/super-admin/practices";
+      const url = status ? `/api/admin/practices?status=${status}` : "/api/admin/practices";
       const response = await fetch(url);
       
       if (!response.ok) {
@@ -75,7 +71,7 @@ const SuperAdminDashboard = () => {
   const handleVerificationAction = async (practiceId: string, status: "verified" | "rejected") => {
     try {
       setActionLoading(practiceId);
-      const response = await fetch(`/api/super-admin/practices/${practiceId}/verify`, {
+      const response = await fetch(`/api/admin/practices/${practiceId}/verify`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
@@ -91,16 +87,6 @@ const SuperAdminDashboard = () => {
       setError(err.message);
     } finally {
       setActionLoading(null);
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      await fetch("/api/super-admin/logout", { method: "POST" });
-      router.push("/super-admin/login");
-    } catch (err) {
-      console.error("Logout error:", err);
-      router.push("/super-admin/login");
     }
   };
 
@@ -155,113 +141,87 @@ const SuperAdminDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Shield className="w-8 h-8 text-blue-600" />
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Super Admin Dashboard</h1>
-                <p className="text-sm text-gray-600">System Administration</p>
-              </div>
-            </div>
-            <Button
-              onClick={handleLogout}
-              variant="outline"
-              className="flex items-center gap-2"
-            >
-              <LogOut className="w-4 h-4" />
-              Logout
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">Practice Verification</h2>
-          <p className="text-gray-600">Manage practice registrations and verification status</p>
-        </div>
-
-        <Tabs defaultValue="pending" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="pending">
-              Pending ({pendingPractices.length})
-            </TabsTrigger>
-            <TabsTrigger value="verified">
-              Verified ({verifiedPractices.length})
-            </TabsTrigger>
-            <TabsTrigger value="rejected">
-              Rejected ({rejectedPractices.length})
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="pending" className="space-y-4">
-            {pendingPractices.length === 0 ? (
-              <Card>
-                <CardContent className="p-8 text-center">
-                  <Clock className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500">No pending practices to review</p>
-                </CardContent>
-              </Card>
-            ) : (
-              pendingPractices.map((practice) => (
-                <PracticeCard
-                  key={practice.$id}
-                  practice={practice}
-                  onVerify={() => handleVerificationAction(practice.$id, "verified")}
-                  onReject={() => handleVerificationAction(practice.$id, "rejected")}
-                  isLoading={actionLoading === practice.$id}
-                  showActions={true}
-                />
-              ))
-            )}
-          </TabsContent>
-
-          <TabsContent value="verified" className="space-y-4">
-            {verifiedPractices.length === 0 ? (
-              <Card>
-                <CardContent className="p-8 text-center">
-                  <CheckCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500">No verified practices</p>
-                </CardContent>
-              </Card>
-            ) : (
-              verifiedPractices.map((practice) => (
-                <PracticeCard
-                  key={practice.$id}
-                  practice={practice}
-                  isLoading={false}
-                  showActions={false}
-                />
-              ))
-            )}
-          </TabsContent>
-
-          <TabsContent value="rejected" className="space-y-4">
-            {rejectedPractices.length === 0 ? (
-              <Card>
-                <CardContent className="p-8 text-center">
-                  <XCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500">No rejected practices</p>
-                </CardContent>
-              </Card>
-            ) : (
-              rejectedPractices.map((practice) => (
-                <PracticeCard
-                  key={practice.$id}
-                  practice={practice}
-                  isLoading={false}
-                  showActions={false}
-                />
-              ))
-            )}
-          </TabsContent>
-        </Tabs>
+    <div className="container mx-auto px-4 py-8">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Practice Verification</h1>
+        <p className="text-gray-600">Manage practice registrations and verification status</p>
       </div>
+
+      <Tabs defaultValue="pending" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="pending">
+            Pending ({pendingPractices.length})
+          </TabsTrigger>
+          <TabsTrigger value="verified">
+            Verified ({verifiedPractices.length})
+          </TabsTrigger>
+          <TabsTrigger value="rejected">
+            Rejected ({rejectedPractices.length})
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="pending" className="space-y-4">
+          {pendingPractices.length === 0 ? (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <Clock className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-500">No pending practices to review</p>
+              </CardContent>
+            </Card>
+          ) : (
+            pendingPractices.map((practice) => (
+              <PracticeCard
+                key={practice.$id}
+                practice={practice}
+                onVerify={() => handleVerificationAction(practice.$id, "verified")}
+                onReject={() => handleVerificationAction(practice.$id, "rejected")}
+                isLoading={actionLoading === practice.$id}
+                showActions={true}
+              />
+            ))
+          )}
+        </TabsContent>
+
+        <TabsContent value="verified" className="space-y-4">
+          {verifiedPractices.length === 0 ? (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <CheckCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-500">No verified practices</p>
+              </CardContent>
+            </Card>
+          ) : (
+            verifiedPractices.map((practice) => (
+              <PracticeCard
+                key={practice.$id}
+                practice={practice}
+                isLoading={false}
+                showActions={false}
+              />
+            ))
+          )}
+        </TabsContent>
+
+        <TabsContent value="rejected" className="space-y-4">
+          {rejectedPractices.length === 0 ? (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <XCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-500">No rejected practices</p>
+              </CardContent>
+            </Card>
+          ) : (
+            rejectedPractices.map((practice) => (
+              <PracticeCard
+                key={practice.$id}
+                practice={practice}
+                isLoading={false}
+                showActions={false}
+              />
+            ))
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
@@ -397,4 +357,4 @@ const PracticeCard: React.FC<PracticeCardProps> = ({
   );
 };
 
-export default SuperAdminDashboard;
+export default PracticeVerificationPage;

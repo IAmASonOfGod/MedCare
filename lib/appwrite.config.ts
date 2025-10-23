@@ -82,3 +82,11 @@ export const storage = new sdk.Storage(client);
 export const messaging = new sdk.Messaging(client);
 export const users = new sdk.Users(client);
 
+// Optional collections for admin onboarding
+export const ADMIN_PASSWORD_RESETS_COLLECTION_ID =
+  process.env.ADMIN_PASSWORD_RESETS_COLLECTION_ID;
+
+// Optional collections for billing/usage
+export const WALLETS_COLLECTION_ID = process.env.WALLETS_COLLECTION_ID;
+export const WALLET_TRANSACTIONS_COLLECTION_ID =
+  process.env.WALLET_TRANSACTIONS_COLLECTION_ID;
